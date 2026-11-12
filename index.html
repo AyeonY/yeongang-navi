@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>연강 내비</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* 레이아웃: 휴대폰 폭 한 컬럼 + 하단 탭. 시각은 교통 안내판처럼 고정폭 숫자, 경로·강조는 신호 앰버 */
+  --bg: #eef1f5;
+  --surface: #ffffff;
+  --ink: #14213d;
+  --muted: #5a6476;
+  --line: #d5dbe4;
+  --accent: #e08a00;
+  --accent-ink: #4d2e00;
+  --accent-soft: #fff1d9;
+  --ok: #1b7444; --ok-soft: #e1f3e8;
+  --warn: #9a5b00; --warn-soft: #fff0d2;
+  --bad: #b3261e; --bad-soft: #fde6e4;
+  --map-ground: #e3e8ef;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1522; --surface: #172132; --ink: #e9eef6; --muted: #9ba7ba; --line: #2b384c;
+    --accent: #f3a937; --accent-ink: #1f1300; --accent-soft: #3a2a10;
+    --ok: #6bd59a; --ok-soft: #12321f; --warn: #f2b85a; --warn-soft: #3a2a0d; --bad: #ff8f86; --bad-soft: #3f1816;
+    --map-ground: #1f2b3e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1522; --surface: #172132; --ink: #e9eef6; --muted: #9ba7ba; --line: #2b384c;
+  --accent: #f3a937; --accent-ink: #1f1300; --accent-soft: #3a2a10;
+  --ok: #6bd59a; --ok-soft: #12321f; --warn: #f2b85a; --warn-soft: #3a2a0d; --bad: #ff8f86; --bad-soft: #3f1816;
+  --map-ground: #1f2b3e;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.app { max-width: 460px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; padding-bottom: 88px; }
+
+/* 상단바 */
+.topbar { background: var(--bg); padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--line); }
+.topbar-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { display: flex; align-items: baseline; gap: 8px; }
+.brand h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+.brand span { font-size: 13px; color: var(--muted); }
+.clock-btn { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+.clock-btn .num { font-size: 15px; font-weight: 600; }
+.mode-tag { font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: var(--accent-soft); color: var(--accent-ink); }
+:root[data-theme="dark"] .mode-tag { color: var(--accent); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mode-tag { color: var(--accent); } }
+
+.time-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 12px; }
+.time-panel[hidden] { display: none; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.seg button { border: 0; background: transparent; padding: 8px; cursor: pointer; font-size: 14px; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); font-weight: 700; }
+.field-row { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; }
+.field { display: grid; gap: 4px; flex: 1 1 120px; }
+.field label { font-size: 13px; color: var(--muted); }
+.field input, .field select { border: 1px solid var(--line); border-radius: 10px; background: var(--bg); padding: 8px 10px; min-height: 40px; width: 100%; }
+.step-btns { display: flex; gap: 6px; }
+.chip-btn { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+.chip-btn:hover { border-color: var(--accent); }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.panel-note { font-size: 12px; color: var(--muted); margin: 0; }
+
+main { padding: 16px; display: grid; gap: 14px; }
+.view[hidden] { display: none; }
+.view { display: grid; gap: 14px; }
+h2.view-title { margin: 4px 0 0; font-size: 18px; letter-spacing: -0.01em; text-wrap: balance; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 12px; }
+.card.hero { border: 2px solid var(--ink); }
+.eyebrow { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: 0.02em; }
+.class-name { font-size: 24px; font-weight: 700; line-height: 1.25; letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+.place { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+.place .room { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+.place .bld { font-size: 18px; font-weight: 700; }
+.place .floor { font-size: 14px; color: var(--muted); }
+.countdown { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding-top: 10px; border-top: 1px dashed var(--line); }
+.countdown .big { font-size: 15px; }
+.countdown .big b { font-family: var(--font-num); font-size: 26px; }
+
+.pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 12px 4px 6px; font-weight: 700; font-size: 14px; }
+.pill .ico { width: 20px; height: 20px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 12px; color: var(--surface); }
+.pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.ok .ico { background: var(--ok); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.warn .ico { background: var(--warn); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.bad .ico { background: var(--bad); }
+
+.banner { background: var(--accent-soft); border-radius: 12px; padding: 10px 12px; font-size: 14px; }
+.banner b { font-weight: 700; }
+
+.section-label { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.section-label h3 { margin: 0; font-size: 15px; }
+.section-label small { color: var(--muted); font-size: 12px; }
+
+.trip { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.trip.rec { border: 2px solid var(--accent); background: var(--accent-soft); }
+.trip .dep { font-family: var(--font-num); font-size: 24px; font-weight: 600; }
+.trip .info { font-size: 14px; line-height: 1.4; }
+.trip .info b { font-size: 16px; }
+.trip .info .arr { color: var(--muted); }
+.trip .slack { font-weight: 700; text-align: right; font-size: 15px; white-space: nowrap; }
+.trip .slack.ok { color: var(--ok); } .trip .slack.warn { color: var(--warn); } .trip .slack.bad { color: var(--bad); }
+.trip .tags { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; }
+.tag { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); }
+.tag.rec { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.tag.crowd-high { color: var(--bad); border-color: var(--bad); }
+.tag.crowd-mid { color: var(--warn); border-color: var(--warn); }
+.tag.crowd-low { color: var(--ok); border-color: var(--ok); }
+.miss { font-size: 14px; padding: 10px 12px; border-left: 4px solid var(--accent); background: var(--bg); border-radius: 0 10px 10px 0; }
+
+.walk-plan { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.walk-plan div { background: var(--bg); border-radius: 10px; padding: 10px; text-align: center; }
+.walk-plan small { display: block; font-size: 12px; color: var(--muted); }
+.walk-plan b { font-family: var(--font-num); font-size: 20px; }
+
+.btn { display: inline-flex; justify-content: center; align-items: center; gap: 8px; border-radius: 12px; padding: 12px 16px; min-height: 48px; border: 1px solid var(--ink); background: var(--ink); color: var(--surface); font-weight: 700; cursor: pointer; text-decoration: none; }
+.btn.secondary { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn.danger { background: transparent; color: var(--bad); border-color: var(--line); }
+.btn.small { min-height: 36px; padding: 6px 12px; font-size: 14px; border-radius: 10px; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-row .btn { flex: 1 1 auto; }
+
+.meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--muted); }
+.meta span::before { content: "· "; }
+.meta span:first-child::before { content: ""; }
+.origin-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+.origin-row select { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 6px 8px; }
+
+/* 길 안내 */
+.map-wrap { overflow-x: auto; }
+.map { width: 100%; height: auto; display: block; border-radius: 12px; background: var(--map-ground); }
+.map .bldg rect { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+.map .bldg text { fill: var(--muted); font-size: 11px; font-family: var(--font-body); }
+.map .bldg.dest rect { stroke: var(--accent); stroke-width: 3; }
+.map .bldg.dest text, .map .bldg.origin text { fill: var(--ink); font-weight: 700; }
+.map .bldg.origin rect { stroke: var(--ink); stroke-width: 2; stroke-dasharray: 4 3; }
+.map .road { stroke: var(--surface); stroke-width: 10; fill: none; stroke-linecap: round; opacity: 0.8; }
+.map .route { stroke: var(--accent); stroke-width: 4; fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 8 6; }
+.map .stop circle { fill: var(--ink); }
+.map .stop text, .map .label { fill: var(--ink); font-size: 11px; font-weight: 700; font-family: var(--font-body); }
+.map .door { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+.map .start { fill: var(--ink); stroke: var(--surface); stroke-width: 2; }
+
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.steps li { display: grid; grid-template-columns: 36px 1fr; gap: 10px; align-items: start; padding: 10px; border: 1px solid var(--line); border-radius: 12px; }
+.steps li.done { opacity: 0.6; }
+.steps li.done .s-title { text-decoration: line-through; }
+.check { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--ink); background: transparent; cursor: pointer; font-weight: 700; display: grid; place-items: center; font-family: var(--font-num); }
+.steps li.done .check { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+.s-title { font-weight: 700; }
+.s-sub { font-size: 14px; color: var(--muted); }
+
+.floor { width: 100%; height: auto; display: block; }
+.floor .corridor { fill: var(--map-ground); }
+.floor .room rect { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+.floor .room text { fill: var(--muted); font-size: 11px; font-family: var(--font-num); text-anchor: middle; }
+.floor .room.dest rect { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 3; }
+.floor .room.dest text { fill: var(--ink); font-weight: 600; font-size: 13px; }
+.floor .elev rect { fill: var(--ink); }
+.floor .elev text { fill: var(--surface); font-size: 10px; text-anchor: middle; font-family: var(--font-body); font-weight: 700; }
+.floor .arrow { stroke: var(--accent); stroke-width: 3; fill: none; marker-end: url(#arrowhead); }
+.floor .arrowhead { fill: var(--accent); }
+
+.arrived { border-radius: 14px; padding: 14px; display: grid; gap: 4px; }
+.arrived.ok { background: var(--ok-soft); color: var(--ok); }
+.arrived.bad { background: var(--bad-soft); color: var(--bad); }
+.arrived b { font-size: 18px; }
+.arrived p { margin: 0; color: var(--ink); font-size: 14px; }
+
+/* 시간표 */
+.day-group { display: grid; gap: 8px; }
+.day-group h3 { margin: 0; font-size: 14px; color: var(--muted); }
+.class-row { display: grid; grid-template-columns: 86px 1fr auto; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.class-row.today { border-left: 4px solid var(--accent); }
+.class-row .t { font-family: var(--font-num); font-size: 13px; line-height: 1.3; }
+.class-row .n { font-weight: 700; }
+.class-row .p { font-size: 13px; color: var(--muted); }
+.row-actions { display: flex; gap: 4px; }
+.icon-btn { border: 1px solid var(--line); background: transparent; border-radius: 8px; padding: 6px 8px; font-size: 13px; cursor: pointer; }
+.icon-btn.del { color: var(--bad); }
+.form-card { border: 2px solid var(--accent); }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-grid .full { grid-column: 1 / -1; }
+.error { color: var(--bad); font-size: 13px; margin: 0; min-height: 1em; }
+.empty { text-align: center; color: var(--muted); padding: 24px 12px; }
+
+/* 셔틀 */
+.shuttle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
+.sh { border: 1px solid var(--line); border-radius: 10px; padding: 8px; text-align: center; background: var(--surface); }
+.sh .num { font-size: 17px; font-weight: 600; display: block; }
+.sh small { font-size: 11px; font-weight: 700; }
+.sh.past { opacity: 0.4; }
+.sh.next { border: 2px solid var(--accent); background: var(--accent-soft); }
+.sh small.crowd-high { color: var(--bad); } .sh small.crowd-mid { color: var(--warn); } .sh small.crowd-low { color: var(--ok); }
+.info-list { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 4px; }
+
+/* 하단 탭 */
+.tabbar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: min(460px, 100%); background: var(--surface); border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(4, 1fr); padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); z-index: 6; }
+.tabbar a { display: grid; justify-items: center; gap: 2px; padding: 6px 0; text-decoration: none; color: var(--muted); font-size: 12px; font-weight: 500; border-radius: 10px; }
+.tabbar a svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tabbar a[aria-current="page"] { color: var(--ink); font-weight: 700; background: var(--accent-soft); }
+
+.toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); width: min(428px, calc(100% - 32px)); background: var(--ink); color: var(--surface); border-radius: 12px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; gap: 12px; z-index: 10; font-size: 14px; }
+.toast[hidden] { display: none; }
+.toast button { background: transparent; border: 1px solid currentColor; color: inherit; border-radius: 8px; padding: 4px 10px; cursor: pointer; font-weight: 700; }
+
+.footnote { font-size: 12px; color: var(--muted); text-align: center; margin: 4px 0 0; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="topbar-row">
+      <div class="brand"><h1>연강 내비</h1><span>다음 강의실까지</span></div>
+      <button class="clock-btn" id="clockBtn" aria-expanded="false" aria-controls="timePanel">
+        <span class="mode-tag" id="modeTag">데모</span>
+        <span class="num" id="clockText">월 08:25</span>
+      </button>
+    </div>
+    <section class="time-panel" id="timePanel" hidden aria-label="현재 시각 설정">
+      <div class="seg" role="group" aria-label="시각 모드">
+        <button type="button" id="modeDemo" aria-pressed="true">데모 시각</button>
+        <button type="button" id="modeReal" aria-pressed="false">실제 시각</button>
+      </div>
+      <div class="field-row" id="demoFields">
+        <div class="field">
+          <label for="demoDay">요일</label>
+          <select id="demoDay"></select>
+        </div>
+        <div class="field">
+          <label for="demoTime">시각</label>
+          <input type="time" id="demoTime" value="08:25">
+        </div>
+        <div class="step-btns">
+          <button type="button" class="chip-btn" id="minus5">−5분</button>
+          <button type="button" class="chip-btn" id="plus5">+5분</button>
+        </div>
+      </div>
+      <div class="presets" id="presets" aria-label="시나리오 바로 보기"></div>
+      <p class="panel-note">데모 시각은 언제 열어 봐도 등교·연강 상황을 확인할 수 있게 하는 기능입니다.</p>
+    </section>
+  </header>
+
+  <main>
+    <section class="view" id="view-today" aria-labelledby="t-today"></section>
+    <section class="view" id="view-route" hidden></section>
+    <section class="view" id="view-timetable" hidden></section>
+    <section class="view" id="view-shuttle" hidden></section>
+    <p class="footnote">예시 데이터로 동작하는 프로토타입입니다. 실제 학교 시스템과 연결되어 있지 않습니다.</p>
+  </main>
+
+  <nav class="tabbar" aria-label="주요 화면">
+    <a href="#today" data-tab="today"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h5"/></svg>오늘</a>
+    <a href="#route" data-tab="route"><svg viewBox="0 0 24 24"><path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg>길 안내</a>
+    <a href="#timetable" data-tab="timetable"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 5v15"/></svg>시간표</a>
+    <a href="#shuttle" data-tab="shuttle"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="13" rx="3"/><path d="M5 11h14M8 20l1-3M16 20l-1-3"/><circle cx="9" cy="14" r="0.5"/><circle cx="15" cy="14" r="0.5"/></svg>셔틀</a>
+  </nav>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden><span id="toastText"></span><button type="button" id="toastUndo">되돌리기</button></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- 예시 데이터 ---------- */
+  var DAYS = ["일", "월", "화", "수", "목", "금", "토"];
+  var STATION = "○○역 2번 출구";
+  var STOP = "중앙광장 정류장";
+  var RIDE = 12;                    // 셔틀 탑승 시간(분)
+  var SHUTTLE_UPDATED = "2026.09.01";
+  var BUILDINGS = {
+    STU: { name: "학생회관", walk: 1, entrance: "광장 쪽 정문", tip: "정류장 바로 왼쪽 건물이에요.", box: [36, 150, 96, 42], door: [132, 171] },
+    LIB: { name: "중앙도서관", walk: 2, entrance: "광장 쪽 정문", tip: "정류장 바로 오른쪽 건물이에요.", box: [208, 150, 96, 42], door: [208, 171] },
+    HUM: { name: "인문관", walk: 3, entrance: "남쪽 정문", tip: "광장에서 왼쪽 위로 올라가면 정문이 보여요.", box: [24, 70, 96, 46], door: [72, 116] },
+    SCI: { name: "과학관", walk: 6, entrance: "남쪽 정문", tip: "언덕길을 따라 올라가면 정면에 있어요.", box: [124, 18, 92, 44], door: [170, 62] },
+    ENG: { name: "공학관", walk: 4, entrance: "동쪽 B입구", tip: "정류장에서 오면 A입구보다 B입구가 2분 가까워요.", box: [226, 54, 96, 50], door: [274, 104] }
+  };
+  var BLD_ORDER = ["ENG", "SCI", "HUM", "LIB", "STU"];
+  var BETWEEN = { "ENG-SCI": 7, "ENG-HUM": 5, "ENG-LIB": 4, "ENG-STU": 5, "SCI-HUM": 6, "SCI-LIB": 5, "SCI-STU": 6, "HUM-LIB": 4, "HUM-STU": 3, "LIB-STU": 2 };
+  var PLAZA = [170, 128];
+  var STOP_XY = [170, 214];
+
+  var SHUTTLES = (function () {
+    var t = [], m;
+    for (m = 7 * 60 + 50; m <= 9 * 60 + 50; m += 10) t.push(m);
+    for (m = 10 * 60 + 10; m <= 17 * 60 + 50; m += 20) t.push(m);
+    t.push(18 * 60 + 30);
+    return t;
+  })();
+
+  var SAMPLE_TIMETABLE = [
+    { name: "UX/UI 디자인", day: 1, start: "09:00", end: "10:15", bld: "ENG", room: "302" },
+    { name: "데이터베이스", day: 1, start: "10:30", end: "11:45", bld: "SCI", room: "105" },
+    { name: "글쓰기와 표현", day: 1, start: "13:30", end: "14:45", bld: "HUM", room: "201" },
+    { name: "HCI 개론", day: 2, start: "10:30", end: "11:45", bld: "ENG", room: "508" },
+    { name: "UX/UI 디자인", day: 3, start: "09:00", end: "10:15", bld: "ENG", room: "302" },
+    { name: "데이터베이스", day: 3, start: "10:30", end: "11:45", bld: "SCI", room: "105" },
+    { name: "캡스톤디자인", day: 4, start: "13:00", end: "15:45", bld: "ENG", room: "407" },
+    { name: "통계학", day: 5, start: "09:00", end: "10:15", bld: "SCI", room: "210" }
+  ];
+
+  var PRESETS = [
+    { label: "월 08:25 등굣길 지하철", day: 1, min: 8 * 60 + 25, loc: "auto" },
+    { label: "월 08:38 셔틀 놓칠 위기", day: 1, min: 8 * 60 + 38, loc: "auto" },
+    { label: "월 10:16 공학관→과학관 연강", day: 1, min: 10 * 60 + 16, loc: "auto" }
+  ];
+
+  /* ---------- 저장소 (실패해도 동작) ---------- */
+  function load(key, fallback) {
+    try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; }
+  }
+  function save(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* 저장 불가 환경 */ }
+  }
+  function withIds(list) {
+    return list.map(function (c, i) { return Object.assign({ id: "c" + Date.now().toString(36) + i }, c); });
+  }
+
+  var state = {
+    timetable: load("yk_timetable", null) || withIds(SAMPLE_TIMETABLE),
+    settings: Object.assign({ mode: "demo", day: 1, min: 8 * 60 + 25, loc: "auto" }, load("yk_settings", {})),
+    tab: "today",
+    stepsDone: {},
+    arrived: null,
+    editingId: null,
+    shuttleDay: null
+  };
+
+  /* ---------- 유틸 ---------- */
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function fmt(m) { m = ((m % 1440) + 1440) % 1440; return pad(Math.floor(m / 60)) + ":" + pad(m % 60); }
+  function toMin(s) { var p = String(s).split(":"); return parseInt(p[0], 10) * 60 + parseInt(p[1], 10); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function floorOf(room) { var f = parseInt(String(room).charAt(0), 10); return isNaN(f) ? 1 : f; }
+  function insideMin(room) { return floorOf(room) <= 1 ? 1 : 2; }
+  function walkBetween(a, b) { if (a === b) return 0; return BETWEEN[a + "-" + b] || BETWEEN[b + "-" + a] || 6; }
+  function roomDirection(room) {
+    var n = parseInt(String(room).slice(-2), 10);
+    if (isNaN(n) || n < 1) return { side: "left", text: "복도 안내판을 확인하세요", order: 1 };
+    if (n <= 5) return { side: "left", text: "엘리베이터에서 내려 왼쪽 복도로, " + n + "번째 문", order: n };
+    return { side: "right", text: "엘리베이터에서 내려 오른쪽 복도로, " + (n - 5) + "번째 문", order: n - 5 };
+  }
+  function crowdOf(m) {
+    if (m >= 8 * 60 + 20 && m <= 8 * 60 + 50) return { lv: "high", label: "혼잡 예상" };
+    if ((m >= 8 * 60 && m < 8 * 60 + 20) || (m > 8 * 60 + 50 && m <= 9 * 60 + 10)) return { lv: "mid", label: "보통" };
+    return { lv: "low", label: "여유" };
+  }
+  function statusOf(slack) {
+    if (slack >= 10) return { cls: "ok", ico: "✓", label: "여유" };
+    if (slack >= 3) return { cls: "warn", ico: "!", label: "빠듯" };
+    if (slack >= 0) return { cls: "warn", ico: "!", label: "아슬아슬" };
+    return { cls: "bad", ico: "✕", label: "지각 위험" };
+  }
+  function slackText(slack) { return slack >= 0 ? "여유 " + slack + "분" : slack * -1 + "분 늦음"; }
+  function dur(m) { return m >= 90 ? "<b>" + Math.floor(m / 60) + "</b>시간 <b>" + (m % 60) + "</b>분" : "<b>" + m + "</b>분"; }
+  function isWeekday(d) { return d >= 1 && d <= 5; }
+
+  function now() {
+    if (state.settings.mode === "real") {
+      var d = new Date();
+      return { day: d.getDay(), min: d.getHours() * 60 + d.getMinutes() };
+    }
+    return { day: state.settings.day, min: state.settings.min };
+  }
+
+  function classesOn(day) {
+    return state.timetable.filter(function (c) { return c.day === day; })
+      .sort(function (a, b) { return toMin(a.start) - toMin(b.start); });
+  }
+
+  /* 지금 상황: 진행 중 수업, 다음 수업, 자동 출발지 */
+  function context(n) {
+    var today = classesOn(n.day);
+    var current = null, next = null, prev = null, offset = 0, i;
+    for (i = 0; i < today.length; i++) {
+      var s = toMin(today[i].start), e = toMin(today[i].end);
+      if (s <= n.min && n.min < e) current = today[i];
+      if (e <= n.min) prev = today[i];
+      if (!next && s > n.min) next = today[i];
+    }
+    if (!next) {
+      for (var d = 1; d <= 7 && !next; d++) {
+        var list = classesOn((n.day + d) % 7);
+        if (list.length) { next = list[0]; offset = d; }
+      }
+    }
+    var autoLoc = "station";
+    if (offset === 0) {
+      if (current) autoLoc = current.bld;
+      else if (prev && n.min - toMin(prev.end) <= 90) autoLoc = prev.bld;
+    }
+    var loc = state.settings.loc === "auto" ? autoLoc : state.settings.loc;
+    if (offset > 0) loc = "station";
+    return { current: current, next: next, offset: offset, origin: loc, autoLoc: autoLoc };
+  }
+
+  /* 이동 계획 계산 */
+  function plan(ctx, n) {
+    var c = ctx.next, dest = BUILDINGS[c.bld], start = toMin(c.start), inside = insideMin(c.room);
+    if (ctx.origin === "station") {
+      var day = (n.day + ctx.offset) % 7;
+      if (!isWeekday(day)) return { type: "station", trips: [], noService: true, inside: inside, dest: dest };
+      var trips = SHUTTLES.map(function (dep) {
+        var arr = dep + RIDE + dest.walk + inside;
+        return { dep: dep, arr: arr, slack: start - arr, crowd: crowdOf(dep) };
+      });
+      var shown, rec;
+      var pool = ctx.offset === 0 ? trips.filter(function (t) { return t.dep >= n.min; }) : trips;
+      if (ctx.offset === 0 && pool.length && pool[0].slack <= 25) {
+        // 곧 출발해야 하는 상황: 지금 탈 수 있는 셔틀 3대
+        shown = pool.slice(0, 3);
+        rec = shown.filter(function (t) { return t.slack >= 3; })[0] || shown.filter(function (t) { return t.slack >= 0; })[0] || null;
+      } else {
+        // 아직 여유가 많은 상황(이른 시각·다른 날): 늦지 않는 마지막 셔틀을 추천
+        var good = pool.filter(function (t) { return t.slack >= 5; });
+        rec = good.length ? good[good.length - 1] : (pool[0] || null);
+        var idx = pool.indexOf(rec);
+        shown = idx >= 0 ? pool.slice(Math.max(0, idx - 1), idx + 2) : [];
+      }
+      return { type: "station", trips: shown, rec: rec, inside: inside, dest: dest };
+    }
+    var walk = walkBetween(ctx.origin, c.bld);
+    var total = walk + inside;
+    var arr = n.min + total;
+    return { type: "walk", walk: walk, inside: inside, total: total, arr: arr, slack: start - arr, leaveBy: start - total - 3, dest: dest };
+  }
+
+  /* ---------- 상단 시각 ---------- */
+  var el = function (id) { return document.getElementById(id); };
+
+  function renderClock() {
+    var n = now();
+    el("clockText").textContent = DAYS[n.day] + " " + fmt(n.min);
+    el("modeTag").textContent = state.settings.mode === "real" ? "실제" : "데모";
+    el("modeDemo").setAttribute("aria-pressed", String(state.settings.mode === "demo"));
+    el("modeReal").setAttribute("aria-pressed", String(state.settings.mode === "real"));
+    el("demoFields").style.display = state.settings.mode === "demo" ? "" : "none";
+    el("demoDay").value = String(state.settings.day);
+    el("demoTime").value = fmt(state.settings.min);
+  }
+
+  function setDemo(day, min, loc) {
+    state.settings.mode = "demo";
+    state.settings.day = day;
+    state.settings.min = ((min % 1440) + 1440) % 1440;
+    if (loc) state.settings.loc = loc;
+    state.arrived = null;
+    state.stepsDone = {};
+    save("yk_settings", state.settings);
+    render();
+  }
+
+  /* ---------- 오늘 ---------- */
+  function originLabel(code) { return code === "station" ? STATION + " (셔틀 이용)" : BUILDINGS[code].name; }
+
+  function originSelect(ctx) {
+    var opts = ['<option value="auto"' + (state.settings.loc === "auto" ? " selected" : "") + '>자동: ' + esc(originLabel(ctx.autoLoc)) + "</option>",
+      '<option value="station"' + (state.settings.loc === "station" ? " selected" : "") + ">" + esc(STATION) + " (셔틀 이용)</option>"];
+    BLD_ORDER.forEach(function (k) {
+      opts.push('<option value="' + k + '"' + (state.settings.loc === k ? " selected" : "") + ">" + BUILDINGS[k].name + "에서 출발</option>");
+    });
+    return '<div class="origin-row"><label for="originSel">출발지</label><select id="originSel">' + opts.join("") + "</select></div>";
+  }
+
+  function renderToday() {
+    var v = el("view-today"), n = now(), ctx = context(n);
+    if (!state.timetable.length) {
+      v.innerHTML = '<h2 class="view-title" id="t-today">오늘의 이동</h2><div class="card empty">등록된 수업이 없어요.<br><a class="btn secondary" href="#timetable" style="margin-top:12px">시간표에 수업 추가하기</a></div>';
+      return;
+    }
+    var c = ctx.next, start = toMin(c.start), p = plan(ctx, n), html = [];
+    html.push('<h2 class="view-title" id="t-today">오늘의 이동</h2>');
+    if (ctx.current) {
+      html.push('<div class="banner">지금 수업 중: <b>' + esc(ctx.current.name) + "</b> · " + esc(BUILDINGS[ctx.current.bld].name) + " " + esc(ctx.current.room) + "호, <span class=\"num\">" + esc(ctx.current.end) + "</span> 종료</div>");
+    }
+
+    var mainSlack = p.type === "walk" ? p.slack : (p.rec ? p.rec.slack : (p.trips[0] ? p.trips[0].slack : -99));
+    var st = statusOf(mainSlack);
+    var when = ctx.offset === 0
+      ? '<span class="big">수업까지 ' + dur(start - n.min) + "</span>"
+      : '<span class="big">' + (ctx.offset === 1 ? "내일" : DAYS[c.day] + "요일") + ' <b class="num">' + esc(c.start) + "</b> 시작</span>";
+
+    html.push('<article class="card hero" aria-label="다음 수업">');
+    html.push('<div class="eyebrow">' + (ctx.offset === 0 ? "다음 수업" : "다음 수업 · " + DAYS[c.day] + "요일") + ' · <span class="num">' + esc(c.start) + "–" + esc(c.end) + "</span></div>");
+    html.push('<p class="class-name">' + esc(c.name) + "</p>");
+    html.push('<div class="place"><span class="bld">' + esc(p.dest.name) + '</span><span class="room num">' + esc(c.room) + '호</span><span class="floor">' + floorOf(c.room) + "층 · 가까운 입구: " + esc(p.dest.entrance) + "</span></div>");
+    html.push('<div class="countdown">' + when + '<span class="pill ' + st.cls + '" role="status"><span class="ico" aria-hidden="true">' + st.ico + "</span>" + st.label + "</span></div>");
+    html.push("</article>");
+
+    html.push('<article class="card" aria-label="이동 방법">');
+    if (p.type === "station") {
+      html.push('<div class="section-label"><h3>' + (ctx.offset === 0 ? "탈 수 있는 셔틀" : "이 셔틀을 타면 돼요") + "</h3><small>" + esc(STATION) + " → " + esc(STOP) + " " + RIDE + "분</small></div>");
+      if (p.noService || !p.trips.length) {
+        html.push('<p class="miss">오늘은 더 이상 운행하는 셔틀이 없어요. 대중교통이나 도보로 이동하세요.</p>');
+      } else {
+        p.trips.forEach(function (t) {
+          var isRec = p.rec && t.dep === p.rec.dep, s = statusOf(t.slack);
+          html.push('<div class="trip' + (isRec ? " rec" : "") + '"><span class="dep">' + fmt(t.dep) + '</span><span class="info">강의실 <b class="num">' + fmt(t.arr) + '</b> 도착<br><span class="arr">도보 ' + p.dest.walk + "분 · 건물 안 " + p.inside + "분</span></span>" +
+            '<span class="slack ' + s.cls + '">' + slackText(t.slack) + "</span>" +
+            '<span class="tags">' + (isRec ? '<span class="tag rec">추천</span>' : "") + '<span class="tag crowd-' + t.crowd.lv + '">' + t.crowd.label + "</span></span></div>");
+        });
+        var r = p.rec, i = r ? p.trips.indexOf(r) : -1, after = i >= 0 ? p.trips[i + 1] : null;
+        if (r && after) {
+          html.push('<p class="miss"><b>' + fmt(r.dep) + " 셔틀을 놓치면</b> 다음 " + fmt(after.dep) + " 셔틀로 " + (after.slack >= 0 ? "여유 " + after.slack + "분이 남아요." : after.slack * -1 + "분 늦어요.") + (r.crowd.lv === "high" ? " 줄이 길면 한 대 먼저 보내지 말고 바로 타세요." : "") + "</p>");
+        } else if (!r) {
+          html.push('<p class="miss"><b>제시간에 도착할 수 있는 셔틀이 없어요.</b> 가장 빠른 셔틀을 타고, 늦는다면 교수님께 미리 알려 주세요.</p>');
+        }
+      }
+    } else {
+      var same = ctx.origin === c.bld;
+      html.push('<div class="section-label"><h3>' + esc(BUILDINGS[ctx.origin].name) + "에서 걸어서 이동</h3><small>" + (same ? "같은 건물" : "건물 사이 도보") + "</small></div>");
+      html.push('<div class="walk-plan"><div><small>도보</small><b>' + p.walk + '</b>분</div><div><small>건물 안·층 이동</small><b>' + p.inside + '</b>분</div><div><small>지금 출발하면</small><b>' + fmt(p.arr) + "</b></div></div>");
+      html.push('<p class="miss">' + (p.slack >= 0 ? "지금 출발하면 <b>" + slackText(p.slack) + "</b>. " : "<b>지금 출발해도 " + slackText(p.slack) + "</b>. ") + "늦어도 <b class=\"num\">" + fmt(p.leaveBy) + "</b>에는 출발하세요.</p>");
+    }
+    html.push(originSelect(ctx));
+    html.push('<a class="btn" href="#route">강의실까지 길 안내 보기</a>');
+    html.push('<div class="meta"><span>셔틀 시간표 ' + SHUTTLE_UPDATED + " 기준</span><span>예상 오차 ±2분</span><span>예시 데이터</span></div>");
+    html.push("</article>");
+
+    var rest = classesOn(n.day).filter(function (x) { return toMin(x.start) > start && ctx.offset === 0; });
+    if (rest.length) {
+      html.push('<article class="card"><div class="section-label"><h3>오늘 이어지는 수업</h3><small>' + rest.length + "개</small></div>");
+      rest.forEach(function (x) {
+        html.push('<div class="class-row"><span class="t">' + esc(x.start) + "<br>" + esc(x.end) + '</span><span><span class="n">' + esc(x.name) + '</span><br><span class="p">' + esc(BUILDINGS[x.bld].name) + " " + esc(x.room) + "호</span></span><span></span></div>");
+      });
+      html.push("</article>");
+    }
+    v.innerHTML = html.join("");
+    var sel = el("originSel");
+    if (sel) sel.addEventListener("change", function () {
+      state.settings.loc = sel.value; state.arrived = null; state.stepsDone = {};
+      save("yk_settings", state.settings); render();
+    });
+  }
+
+  /* ---------- 길 안내 ---------- */
+  function mapSvg(ctx) {
+    var dest = ctx.next.bld, origin = ctx.origin, d = BUILDINGS[dest];
+    var startPt = origin === "station" ? STOP_XY : BUILDINGS[origin].door;
+    var pts = [startPt];
+    if (origin !== dest) { pts.push(PLAZA); }
+    pts.push(d.door);
+    var s = ['<svg class="map" viewBox="0 0 340 250" role="img" aria-label="캠퍼스 지도: ' + esc(originLabel(origin)) + "에서 " + esc(d.name) + " " + esc(d.entrance) + '까지 경로">'];
+    s.push('<path class="road" d="M170 240 L170 128 M72 128 L274 128 M72 128 L72 116 M170 128 L170 62 M274 128 L274 104 M132 171 L170 171 L208 171"/>');
+    BLD_ORDER.forEach(function (k) {
+      var b = BUILDINGS[k], cls = "bldg" + (k === dest ? " dest" : "") + (k === origin && k !== dest ? " origin" : "");
+      s.push('<g class="' + cls + '"><rect x="' + b.box[0] + '" y="' + b.box[1] + '" width="' + b.box[2] + '" height="' + b.box[3] + '" rx="6"/><text x="' + (b.box[0] + b.box[2] / 2) + '" y="' + (b.box[1] + b.box[3] / 2 + 4) + '" text-anchor="middle">' + b.name + "</text></g>");
+    });
+    s.push('<g class="stop"><circle cx="' + STOP_XY[0] + '" cy="' + STOP_XY[1] + '" r="6"/><text x="' + (STOP_XY[0] + 10) + '" y="' + (STOP_XY[1] + 4) + '">' + STOP + "</text></g>");
+    s.push('<text class="label" x="176" y="246">↓ ' + STATION + " (셔틀 " + RIDE + "분)</text>");
+    s.push('<polyline class="route" points="' + pts.map(function (p) { return p.join(","); }).join(" ") + '"/>');
+    s.push('<circle class="start" cx="' + startPt[0] + '" cy="' + startPt[1] + '" r="6"/>');
+    s.push('<circle class="door" cx="' + d.door[0] + '" cy="' + d.door[1] + '" r="7"/>');
+    s.push('<text class="label" x="' + Math.min(d.door[0] + 10, 280) + '" y="' + (d.door[1] + 16) + '">' + d.entrance + "</text>");
+    s.push("</svg>");
+    return s.join("");
+  }
+
+  function floorSvg(room) {
+    var dir = roomDirection(room), floor = floorOf(room), s = [];
+    s.push('<svg class="floor" viewBox="0 0 340 130" role="img" aria-label="' + floor + "층 평면도: " + esc(room) + "호는 " + esc(dir.text) + '">');
+    s.push('<defs><marker id="arrowhead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path class="arrowhead" d="M0 0 L10 5 L0 10 z"/></marker></defs>');
+    s.push('<rect class="corridor" x="6" y="52" width="328" height="26" rx="4"/>');
+    s.push('<g class="elev"><rect x="150" y="84" width="40" height="34" rx="4"/><text x="170" y="105">EV</text></g>');
+    var i, num, x, isDest;
+    for (i = 1; i <= 10; i++) {
+      var left = i <= 5, k = left ? i : i - 5;
+      x = left ? 150 - k * 28 : 190 + (k - 1) * 28;
+      num = floor + pad(i);
+      isDest = num === String(room);
+      s.push('<g class="room' + (isDest ? " dest" : "") + '"><rect x="' + x + '" y="10" width="26" height="38" rx="3"/><text x="' + (x + 13) + '" y="33">' + pad(i) + "</text></g>");
+    }
+    var target = dir.side === "left" ? 150 - dir.order * 28 + 13 : 190 + (dir.order - 1) * 28 + 13;
+    s.push('<path class="arrow" d="M170 84 L170 66 L' + target + ' 66 L' + target + ' 52"/>');
+    s.push('<text class="label" x="8" y="96" style="fill:var(--muted);font-size:11px">호실 번호 뒤 두 자리</text>');
+    s.push("</svg>");
+    return s.join("");
+  }
+
+  function routeSteps(ctx, p) {
+    var c = ctx.next, d = BUILDINGS[c.bld], steps = [];
+    var dir = roomDirection(c.room), floor = floorOf(c.room);
+    if (ctx.origin === "station") {
+      var t = p.rec || p.trips[0];
+      steps.push({ t: (t ? fmt(t.dep) + " " : "") + "셔틀 타기", s: STATION + " 셔틀 정류장에서 탑승" + (t && t.crowd.lv === "high" ? " · 이 시간대는 줄이 길어요" : "") });
+      steps.push({ t: STOP + "에서 내리기", s: "탑승 약 " + RIDE + "분" });
+      steps.push({ t: d.name + " " + d.entrance + "로 가기", s: "도보 " + d.walk + "분 · " + d.tip });
+    } else if (ctx.origin !== c.bld) {
+      steps.push({ t: BUILDINGS[ctx.origin].name + " 나서기", s: "중앙광장 방향으로 이동" });
+      steps.push({ t: d.name + " " + d.entrance + "로 가기", s: "도보 " + p.walk + "분 · " + d.tip });
+    } else {
+      steps.push({ t: "같은 건물 안에서 이동", s: d.name + " 안에서 바로 이동해요" });
+    }
+    steps.push(floor <= 1 ? { t: "1층 복도로 들어가기", s: "입구에서 정면 엘리베이터 쪽으로 가요" } : { t: floor + "층으로 올라가기", s: "입구 정면 엘리베이터 또는 오른쪽 계단 이용" });
+    steps.push({ t: c.room + "호 찾기", s: dir.text });
+    return steps;
+  }
+
+  function renderRoute() {
+    var v = el("view-route"), n = now(), ctx = context(n);
+    if (!state.timetable.length) { v.innerHTML = '<h2 class="view-title">길 안내</h2><div class="card empty">시간표에 수업을 추가하면 길 안내가 나타나요.</div>'; return; }
+    var c = ctx.next, p = plan(ctx, n), steps = routeSteps(ctx, p), html = [];
+    var key = c.id + "|" + ctx.origin;
+    var done = state.stepsDone[key] || [];
+    html.push('<h2 class="view-title">' + esc(c.name) + " · " + esc(BUILDINGS[c.bld].name) + " " + esc(c.room) + "호까지</h2>");
+    html.push('<article class="card"><div class="section-label"><h3>캠퍼스 경로</h3><small>' + esc(originLabel(ctx.origin)) + " 출발</small></div><div class=\"map-wrap\">" + mapSvg(ctx) + "</div></article>");
+    html.push('<article class="card"><div class="section-label"><h3>단계별 안내</h3><small>' + done.length + " / " + steps.length + ' 완료</small></div><ol class="steps">');
+    steps.forEach(function (s, i) {
+      var isDone = done.indexOf(i) >= 0;
+      html.push('<li class="' + (isDone ? "done" : "") + '"><button type="button" class="check" data-step="' + i + '" aria-pressed="' + isDone + '" aria-label="' + (i + 1) + "단계 " + (isDone ? "완료 취소" : "완료로 표시") + '">' + (isDone ? "✓" : i + 1) + '</button><div><div class="s-title">' + esc(s.t) + '</div><div class="s-sub">' + esc(s.s) + "</div></div></li>");
+    });
+    html.push("</ol></article>");
+    html.push('<article class="card"><div class="section-label"><h3>' + floorOf(c.room) + "층 평면도</h3><small>" + esc(c.room) + "호 위치</small></div>" + floorSvg(c.room) + "</article>");
+
+    if (state.arrived && state.arrived.key === key) {
+      var a = state.arrived, ok = a.slack >= 0;
+      html.push('<div class="arrived ' + (ok ? "ok" : "bad") + '" role="status"><b>' + (ok ? "✓ " : "") + fmt(a.at) + " 도착 · " + (ok ? "수업 " + a.slack + "분 전" : "수업 시작 " + a.slack * -1 + "분 후") + "</b><p>" + (ok ? "제시간에 도착했어요. " : "다음에는 한 대 이른 셔틀을 추천할게요. ") + (a.demo ? "(데모 시각에서는 예상 도착 시각으로 기록해요)" : "") + '</p></div>');
+      html.push('<button type="button" class="btn secondary" id="resetArrive">안내 다시 시작</button>');
+    } else {
+      html.push('<button type="button" class="btn" id="arriveBtn">도착했어요</button>');
+    }
+    v.innerHTML = html.join("");
+
+    v.querySelectorAll(".check").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var i = parseInt(b.getAttribute("data-step"), 10), list = (state.stepsDone[key] || []).slice(), at = list.indexOf(i);
+        if (at >= 0) list.splice(at, 1); else list.push(i);
+        state.stepsDone[key] = list; renderRoute();
+        var again = v.querySelector('.check[data-step="' + i + '"]'); if (again) again.focus();
+      });
+    });
+    var ab = el("arriveBtn");
+    if (ab) ab.addEventListener("click", function () {
+      var demo = state.settings.mode === "demo", at;
+      if (demo) at = p.type === "walk" ? p.arr : ((p.rec || p.trips[0] || { arr: n.min }).arr);
+      else at = n.min;
+      state.stepsDone[key] = steps.map(function (_, i) { return i; });
+      state.arrived = { key: key, at: at, slack: toMin(c.start) - at, demo: demo };
+      renderRoute();
+    });
+    var rb = el("resetArrive");
+    if (rb) rb.addEventListener("click", function () { state.arrived = null; state.stepsDone[key] = []; renderRoute(); });
+  }
+
+  /* ---------- 시간표 ---------- */
+  function formHtml(c) {
+    c = c || { name: "", day: 1, start: "09:00", end: "10:15", bld: "ENG", room: "" };
+    var days = [1, 2, 3, 4, 5].map(function (d) { return '<option value="' + d + '"' + (c.day === d ? " selected" : "") + ">" + DAYS[d] + "요일</option>"; }).join("");
+    var blds = BLD_ORDER.map(function (k) { return '<option value="' + k + '"' + (c.bld === k ? " selected" : "") + ">" + BUILDINGS[k].name + "</option>"; }).join("");
+    return '<form class="card form-card" id="classForm" novalidate><div class="section-label"><h3>' + (state.editingId ? "수업 수정" : "수업 추가") + '</h3></div><div class="form-grid">' +
+      '<div class="field full"><label for="f-name">과목명</label><input id="f-name" maxlength="30" value="' + esc(c.name) + '" placeholder="예: UX/UI 디자인"></div>' +
+      '<div class="field"><label for="f-day">요일</label><select id="f-day">' + days + "</select></div>" +
+      '<div class="field"><label for="f-bld">건물</label><select id="f-bld">' + blds + "</select></div>" +
+      '<div class="field"><label for="f-start">시작</label><input type="time" id="f-start" value="' + esc(c.start) + '"></div>' +
+      '<div class="field"><label for="f-end">종료</label><input type="time" id="f-end" value="' + esc(c.end) + '"></div>' +
+      '<div class="field full"><label for="f-room">호실 (숫자 3자리, 첫 자리가 층)</label><input id="f-room" inputmode="numeric" maxlength="3" value="' + esc(c.room) + '" placeholder="예: 302"></div>' +
+      '</div><p class="error" id="formError" role="alert"></p><div class="btn-row"><button type="submit" class="btn">' + (state.editingId ? "저장" : "추가") + '</button><button type="button" class="btn secondary" id="cancelForm">취소</button></div></form>';
+  }
+
+  var undoStack = null, toastTimer = null;
+  function showToast(text, undoFn) {
+    el("toastText").textContent = text;
+    el("toast").hidden = false;
+    el("toastUndo").style.display = undoFn ? "" : "none";
+    undoStack = undoFn;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el("toast").hidden = true; undoStack = null; }, 5000);
+  }
+
+  function saveTimetable() { save("yk_timetable", state.timetable); }
+
+  function renderTimetable() {
+    var v = el("view-timetable"), n = now(), html = [];
+    html.push('<h2 class="view-title">내 시간표</h2>');
+    if (state.editingId !== null) {
+      var editing = state.editingId === "new" ? null : state.timetable.filter(function (c) { return c.id === state.editingId; })[0];
+      html.push(formHtml(editing));
+    } else {
+      html.push('<button type="button" class="btn" id="addClass">+ 수업 추가</button>');
+    }
+    if (!state.timetable.length) html.push('<div class="card empty">등록된 수업이 없어요.</div>');
+    [1, 2, 3, 4, 5].forEach(function (d) {
+      var list = classesOn(d);
+      if (!list.length) return;
+      html.push('<div class="day-group"><h3>' + DAYS[d] + "요일" + (d === n.day ? " · 오늘" : "") + "</h3>");
+      list.forEach(function (c) {
+        html.push('<div class="class-row' + (d === n.day ? " today" : "") + '"><span class="t">' + esc(c.start) + "<br>" + esc(c.end) + '</span><span><span class="n">' + esc(c.name) + '</span><br><span class="p">' + esc(BUILDINGS[c.bld].name) + " " + esc(c.room) + "호 · " + floorOf(c.room) + '층</span></span><span class="row-actions"><button type="button" class="icon-btn" data-edit="' + esc(c.id) + '" aria-label="' + esc(c.name) + ' 수정">수정</button><button type="button" class="icon-btn del" data-del="' + esc(c.id) + '" aria-label="' + esc(c.name) + ' 삭제">삭제</button></span></div>');
+      });
+      html.push("</div>");
+    });
+    html.push('<button type="button" class="btn danger" id="resetTT">예시 시간표로 되돌리기</button>');
+    v.innerHTML = html.join("");
+
+    var add = el("addClass");
+    if (add) add.addEventListener("click", function () { state.editingId = "new"; renderTimetable(); el("f-name").focus(); });
+    v.querySelectorAll("[data-edit]").forEach(function (b) {
+      b.addEventListener("click", function () { state.editingId = b.getAttribute("data-edit"); renderTimetable(); el("f-name").focus(); });
+    });
+    v.querySelectorAll("[data-del]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var id = b.getAttribute("data-del"), idx = -1;
+        state.timetable.forEach(function (c, i) { if (c.id === id) idx = i; });
+        if (idx < 0) return;
+        var removed = state.timetable.splice(idx, 1)[0];
+        saveTimetable(); render();
+        showToast("‘" + removed.name + "’ 수업을 삭제했어요.", function () { state.timetable.splice(idx, 0, removed); saveTimetable(); render(); });
+      });
+    });
+    el("resetTT").addEventListener("click", function () {
+      var before = state.timetable.slice();
+      state.timetable = withIds(SAMPLE_TIMETABLE); state.editingId = null; saveTimetable(); render();
+      showToast("예시 시간표로 되돌렸어요.", function () { state.timetable = before; saveTimetable(); render(); });
+    });
+    var form = el("classForm");
+    if (form) {
+      el("cancelForm").addEventListener("click", function () { state.editingId = null; renderTimetable(); });
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var item = {
+          name: el("f-name").value.trim(),
+          day: parseInt(el("f-day").value, 10),
+          start: el("f-start").value,
+          end: el("f-end").value,
+          bld: el("f-bld").value,
+          room: el("f-room").value.trim()
+        };
+        var err = "";
+        if (!item.name) err = "과목명을 입력하세요.";
+        else if (!item.start || !item.end) err = "시작과 종료 시각을 모두 입력하세요.";
+        else if (toMin(item.end) <= toMin(item.start)) err = "종료 시각은 시작 시각보다 늦어야 해요.";
+        else if (!/^[1-9][0-9]{2}$/.test(item.room)) err = "호실은 302처럼 숫자 3자리로 입력하세요. 첫 자리가 층이에요.";
+        else {
+          var clash = state.timetable.filter(function (c) {
+            return c.id !== state.editingId && c.day === item.day && toMin(c.start) < toMin(item.end) && toMin(item.start) < toMin(c.end);
+          })[0];
+          if (clash) err = DAYS[item.day] + "요일 " + clash.start + "–" + clash.end + " ‘" + clash.name + "’ 수업과 시간이 겹쳐요.";
+        }
+        if (err) { el("formError").textContent = err; return; }
+        if (state.editingId === "new") {
+          item.id = "c" + Date.now().toString(36);
+          state.timetable.push(item);
+          showToast("‘" + item.name + "’ 수업을 추가했어요.");
+        } else {
+          state.timetable = state.timetable.map(function (c) { return c.id === state.editingId ? Object.assign({ id: c.id }, item) : c; });
+          showToast("‘" + item.name + "’ 수업을 수정했어요.");
+        }
+        state.editingId = null; saveTimetable(); render();
+      });
+    }
+  }
+
+  /* ---------- 셔틀 ---------- */
+  function renderShuttle() {
+    var v = el("view-shuttle"), n = now();
+    var day = state.shuttleDay === null ? (isWeekday(n.day) ? n.day : 1) : state.shuttleDay;
+    var isToday = day === n.day, nextDep = null, html = [];
+    if (isToday) nextDep = SHUTTLES.filter(function (m) { return m >= n.min; })[0];
+    html.push('<h2 class="view-title">전체 셔틀 시간표</h2>');
+    html.push('<div class="card"><div class="field-row"><div class="field"><label for="shDay">요일</label><select id="shDay">' +
+      [1, 2, 3, 4, 5].map(function (d) { return '<option value="' + d + '"' + (d === day ? " selected" : "") + ">" + DAYS[d] + "요일" + (d === n.day ? " (오늘)" : "") + "</option>"; }).join("") +
+      '</select></div></div><ul class="info-list"><li>' + esc(STATION) + " → " + esc(STOP) + ", 약 " + RIDE + "분</li><li>평일만 운행 · 주말·공휴일 운행 없음</li><li>08:20–08:50 출발 셔틀은 혼잡해요 (지난 학기 탑승 기록 기준, 예시)</li></ul>" +
+      '<div class="meta"><span>' + SHUTTLE_UPDATED + " 기준</span><span>변경 공지 없음</span><span>예시 데이터</span></div></div>");
+    if (!isWeekday(n.day) && isToday === false && state.shuttleDay === null) {
+      html.push('<p class="banner">오늘(' + DAYS[n.day] + "요일)은 셔틀이 운행하지 않아요. 월요일 시간표를 보여 드려요.</p>");
+    }
+    html.push('<div class="shuttle-grid" role="list">');
+    SHUTTLES.forEach(function (m) {
+      var cr = crowdOf(m), past = isToday && m < n.min, nx = m === nextDep;
+      html.push('<div role="listitem" class="sh' + (past ? " past" : "") + (nx ? " next" : "") + '"><span class="num">' + fmt(m) + '</span><small class="crowd-' + cr.lv + '">' + (nx ? "다음 셔틀 · " : "") + cr.label + "</small></div>");
+    });
+    html.push("</div>");
+    v.innerHTML = html.join("");
+    el("shDay").addEventListener("change", function (e) { state.shuttleDay = parseInt(e.target.value, 10); renderShuttle(); });
+  }
+
+  /* ---------- 라우팅 ---------- */
+  var TABS = ["today", "route", "timetable", "shuttle"];
+  function readHash() {
+    var h = (location.hash || "").replace("#", "");
+    return TABS.indexOf(h) >= 0 ? h : "today";
+  }
+  function render() {
+    renderClock();
+    TABS.forEach(function (t) { el("view-" + t).hidden = t !== state.tab; });
+    document.querySelectorAll(".tabbar a").forEach(function (a) {
+      if (a.getAttribute("data-tab") === state.tab) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+    });
+    if (state.tab === "today") renderToday();
+    else if (state.tab === "route") renderRoute();
+    else if (state.tab === "timetable") renderTimetable();
+    else renderShuttle();
+  }
+  window.addEventListener("hashchange", function () { state.tab = readHash(); render(); window.scrollTo(0, 0); });
+
+  /* ---------- 시각 패널 ---------- */
+  el("demoDay").innerHTML = [1, 2, 3, 4, 5, 6, 0].map(function (d) { return '<option value="' + d + '">' + DAYS[d] + "요일</option>"; }).join("");
+  el("presets").innerHTML = PRESETS.map(function (p, i) { return '<button type="button" class="chip-btn" data-preset="' + i + '">' + p.label + "</button>"; }).join("");
+  el("clockBtn").addEventListener("click", function () {
+    var panel = el("timePanel"), open = panel.hidden;
+    panel.hidden = !open; el("clockBtn").setAttribute("aria-expanded", String(open));
+  });
+  el("modeDemo").addEventListener("click", function () { state.settings.mode = "demo"; save("yk_settings", state.settings); render(); });
+  el("modeReal").addEventListener("click", function () { state.settings.mode = "real"; state.arrived = null; save("yk_settings", state.settings); render(); });
+  el("demoDay").addEventListener("change", function (e) { setDemo(parseInt(e.target.value, 10), state.settings.min); });
+  el("demoTime").addEventListener("change", function (e) { if (e.target.value) setDemo(state.settings.day, toMin(e.target.value)); });
+  el("minus5").addEventListener("click", function () { setDemo(state.settings.day, state.settings.min - 5); });
+  el("plus5").addEventListener("click", function () { setDemo(state.settings.day, state.settings.min + 5); });
+  el("presets").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-preset]"); if (!b) return;
+    var p = PRESETS[parseInt(b.getAttribute("data-preset"), 10)];
+    setDemo(p.day, p.min, p.loc);
+    el("timePanel").hidden = true; el("clockBtn").setAttribute("aria-expanded", "false");
+    if (state.tab !== "today") location.hash = "today";
+  });
+  el("toastUndo").addEventListener("click", function () {
+    if (undoStack) { var fn = undoStack; undoStack = null; fn(); }
+    el("toast").hidden = true;
+  });
+
+  setInterval(function () { if (state.settings.mode === "real") render(); }, 30000);
+
+  state.tab = readHash();
+  render();
+
+  /* 검증용으로 계산 함수 노출 */
+  window.__yk = { context: context, plan: plan, now: now, state: state, fmt: fmt };
+})();
+</script>
+</body>
+</html>
