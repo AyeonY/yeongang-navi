@@ -208,6 +208,7 @@ button, input, select { font: inherit; color: inherit; }
 .row-actions { display: flex; gap: 4px; }
 .mini { border: 1px solid var(--line); background: var(--glass-strong); border-radius: 10px; padding: 6px 9px; font-size: 13px; cursor: pointer; }
 .mini.del { color: var(--bad); }
+.mini.link { color: var(--blue); text-decoration: none; display: inline-flex; align-items: center; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .form-grid .full { grid-column: 1 / -1; }
 .error { color: var(--bad); font-size: 13px; margin: 0; min-height: 1em; }
@@ -283,7 +284,7 @@ button, input, select { font: inherit; color: inherit; }
     <section class="view" id="view-timetable" hidden></section>
     <section class="view" id="view-bus" hidden></section>
   </main>
-  <p class="foot-note">통학버스 시각은 2026학년도 2학기 노선표(안) 기준이며, 운행 전 MNU버스로에서 한 번 더 확인하세요.</p>
+  <p class="foot-note">통학버스 시각은 2026학년도 2학기 노선표(안) 기준이며, 운행 전 학교 통학버스 시스템의 차량 위치에서 한 번 더 확인하세요.</p>
 </div>
 
 <nav class="tabbar glass" aria-label="주요 화면">
@@ -340,11 +341,11 @@ button, input, select { font: inherit; color: inherit; }
   ];
 
   var SAMPLE_TIMETABLE = [
-    { name: "UX/UI 디자인", day: 1, start: "09:00", end: "10:15", bld: "ENG", room: "302", memo: "" },
+    { name: "웹프로그래밍", day: 1, start: "09:00", end: "10:15", bld: "ENG", room: "302", memo: "" },
     { name: "통계학", day: 1, start: "10:30", end: "11:45", bld: "C30", room: "105", memo: "" },
     { name: "글쓰기와 표현", day: 1, start: "13:30", end: "14:45", bld: "B15", room: "201", memo: "" },
     { name: "HCI 개론", day: 2, start: "10:30", end: "11:45", bld: "ENG", room: "508", memo: "" },
-    { name: "UX/UI 디자인", day: 3, start: "09:00", end: "10:15", bld: "ENG", room: "302", memo: "" },
+    { name: "웹프로그래밍", day: 3, start: "09:00", end: "10:15", bld: "ENG", room: "302", memo: "" },
     { name: "통계학", day: 3, start: "10:30", end: "11:45", bld: "C30", room: "105", memo: "" },
     { name: "캡스톤디자인", day: 4, start: "13:00", end: "15:45", bld: "ENG", room: "407", memo: "" },
     { name: "경영학원론", day: 5, start: "09:00", end: "10:15", bld: "A08", room: "210", memo: "" }
@@ -374,6 +375,8 @@ button, input, select { font: inherit; color: inherit; }
     tab: "today", stepsDone: {}, arrived: null, editingId: null, editingRoute: null
   };
   function saveSettings() { save("mnu_settings", state.settings); }
+  // 예전 예시 과목명(UX/UI 디자인)이 저장돼 있으면 새 예시 과목명으로 바꿈
+  state.timetable.forEach(function (c) { if (c.name === "UX/UI 디자인") c.name = "웹프로그래밍"; });
 
   /* =========================================================
      3. 유틸
@@ -413,6 +416,34 @@ button, input, select { font: inherit; color: inherit; }
   function isMine(t) { return t.area === state.settings.myArea && (t.dir === "in" ? t.place === state.settings.myBoard : t.place === state.settings.myDest); }
   function daysLabel(t) { return t.days.length === 5 ? (t.fri ? "평일 · 금 " + t.fri : "평일") : "월~목"; }
   function saveTrips() { save("mnu_trips_2026_2", state.trips); }
+
+  // 학교 통학버스 시스템(mokpo.unibus.kr)의 노선 번호(lineId). 노선 및 정거장 페이지에서 확인한 값
+  var UNIBUS = "https://mokpo.unibus.kr/";
+  var UNIBUS_LOCATION = UNIBUS + "#!/bus-location";
+  var UNIBUS_LINES = [
+    ["목포권", "in", "08:00", "대성초", 37], ["목포권", "in", "08:15", "골드클래스", 39], ["목포권", "in", "09:20", "대성초", 41],
+    ["목포권", "in", "09:30", "골드클래스", 40], ["목포권", "in", "08:00", "신안병원", 42], ["목포권", "in", "08:15", "버스터미널", 43],
+    ["목포권", "in", "08:10", "신안인스빌", 45], ["목포권", "in", "09:20", "신안인스빌", 46], ["목포권", "in", "08:10", "옥암주공", 49],
+    ["목포권", "in", "08:15", "도청프라자", 50], ["목포권", "in", "09:20", "옥암주공", 51], ["목포권", "in", "08:00", "제일풍경채", 52],
+    ["목포권", "in", "12:30", "목포시외버스터미널", 143],
+    ["광주권", "in", "07:10", "염주체육관", 1], ["광주권", "in", "07:10", "금호지구", 2], ["광주권", "in", "07:00", "시립장애인", 3],
+    ["광주권", "in", "07:00", "전남대정문", 4], ["광주권", "in", "06:50", "일곡119", 6], ["광주권", "in", "07:10", "첨단응암", 7],
+    ["광주권", "in", "07:00", "남부대", 8], ["광주권", "in", "07:15", "월곡동", 9], ["광주권", "in", "07:30", "송정역", 10],
+    ["광주권", "in", "09:20", "용두주공", 11], ["광주권", "in", "09:20", "남부대", 80], ["광주권", "in", "06:50", "문흥동", 12],
+    ["광주권", "in", "06:50", "31사단", 5], ["광주권", "in", "07:00", "지원2동", 13], ["광주권", "in", "07:00", "LG전자베스트샵", 14],
+    ["광주권", "in", "07:10", "풍암지구", 15], ["광주권", "in", "07:30", "동성고", 16], ["광주권", "in", "09:10", "풍암지구", 17],
+    ["광주권", "in", "09:30", "동성고", 81], ["광주권", "out", "17:30", "문흥동", 31], ["광주권", "out", "17:30", "일곡병원", 32],
+    ["해남권", "in", "07:00", "해남", 70]
+  ];
+  function unibusLine(t) {
+    var hit = UNIBUS_LINES.filter(function (l) { return l[0] === t.area && l[1] === t.dir && l[2] === t.dep && t.place.indexOf(l[3]) >= 0; })[0];
+    return hit ? UNIBUS + "#!/stop?lineId=" + hit[4] : null;
+  }
+  function lineLinks(t, small) {
+    var url = unibusLine(t), cls = small ? "mini link" : "btn ghost sm";
+    return (url ? '<a class="' + cls + '" href="' + url + '" target="_blank" rel="noopener">노선·정류장 보기 ↗</a>' : "") +
+      '<a class="' + cls + '" href="' + UNIBUS_LOCATION + '" target="_blank" rel="noopener">차량 위치 ↗</a>';
+  }
 
   function now() {
     if (state.settings.mode === "real") { var d = new Date(); return { day: d.getDay(), min: d.getHours() * 60 + d.getMinutes() }; }
@@ -538,7 +569,7 @@ button, input, select { font: inherit; color: inherit; }
   function busTripHtml(t, p) {
     var s = statusOf(t.slack), tr = t.trip;
     return '<div class="trip' + (t.mine ? " mine" : "") + '"><span class="dep">' + fmt(t.dep) + '</span><span class="info"><b>' + esc(tr.place) + "</b> 출발<br><span>도림 도착 약 " + fmt(t.dep + tr.eta) + " · 강의실 " + fmt(t.arr) + "</span></span>" +
-      '<span class="slack ' + s.cls + '">' + slackText(t.slack) + '</span><span class="tags">' + (t.mine ? '<span class="tag blue">내 승차 지점</span>' : "") + '<span class="tag">' + esc(daysLabel(tr)) + "</span>" + (tr.note ? '<span class="tag">' + esc(tr.note) + "</span>" : "") + '<span class="tag src">이동 ' + tr.eta + "분 + 도보 " + p.walk + "분 추정</span></span></div>";
+      '<span class="slack ' + s.cls + '">' + slackText(t.slack) + '</span><span class="tags">' + (t.mine ? '<span class="tag blue">내 승차 지점</span>' : "") + '<span class="tag">' + esc(daysLabel(tr)) + "</span>" + (tr.note ? '<span class="tag">' + esc(tr.note) + "</span>" : "") + '<span class="tag src">이동 ' + tr.eta + "분 + 도보 " + p.walk + "분 추정</span></span>" + (t.mine ? '<span class="tags">' + lineLinks(tr, true) + "</span>" : "") + "</div>";
   }
 
   function renderToday() {
@@ -713,7 +744,7 @@ button, input, select { font: inherit; color: inherit; }
     var days = [1, 2, 3, 4, 5].map(function (d) { return '<option value="' + d + '"' + (c.day === d ? " selected" : "") + ">" + DAYS[d] + "요일</option>"; }).join("");
     var blds = BLD_ORDER.map(function (k) { return '<option value="' + k + '"' + (c.bld === k ? " selected" : "") + ">" + esc(bLabel(k)) + "</option>"; }).join("");
     return '<form class="card glass" id="classForm" novalidate><div class="sec-head"><h3>' + (state.editingId === "new" ? "수업 추가" : "수업 수정") + '</h3></div><div class="form-grid">' +
-      '<div class="field full"><label for="f-name">과목명</label><input id="f-name" maxlength="30" value="' + esc(c.name) + '" placeholder="예: UX/UI 디자인"></div>' +
+      '<div class="field full"><label for="f-name">과목명</label><input id="f-name" maxlength="30" value="' + esc(c.name) + '" placeholder="예: 웹프로그래밍"></div>' +
       '<div class="field"><label for="f-day">요일</label><select id="f-day">' + days + '</select></div>' +
       '<div class="field"><label for="f-bld">건물</label><select id="f-bld">' + blds + '</select></div>' +
       '<div class="field"><label for="f-start">시작</label><input type="time" id="f-start" value="' + esc(c.start) + '"></div>' +
@@ -791,7 +822,7 @@ button, input, select { font: inherit; color: inherit; }
         (t.dir === "in" ? '<div class="field"><label for="tr-eta">도림까지(분)</label><input type="number" min="5" max="180" id="tr-eta" value="' + t.eta + '"></div>' : "") +
         '</div><div class="btn-row"><button type="button" class="btn blue sm" data-tsave="' + t.id + '">저장</button><button type="button" class="btn ghost sm" data-tcancel="1">취소</button></div>';
     } else {
-      h += '<div class="row">' + (!mine ? '<button type="button" class="mini" data-tmine="' + t.id + '">' + (t.dir === "in" ? "여기서 타요" : "여기서 내려요") + "</button>" : "") + '<button type="button" class="mini" data-tedit="' + t.id + '">시각 고치기</button></div>';
+      h += '<div class="row">' + (!mine ? '<button type="button" class="mini" data-tmine="' + t.id + '">' + (t.dir === "in" ? "여기서 타요" : "여기서 내려요") + "</button>" : "") + '<button type="button" class="mini" data-tedit="' + t.id + '">시각 고치기</button>' + lineLinks(t, true) + "</div>";
     }
     return h + "</div>";
   }
@@ -807,13 +838,13 @@ button, input, select { font: inherit; color: inherit; }
     h.push('</article><article class="card glass"><div class="sec-head"><h3>하교 · 도림캠퍼스 출발</h3><small>' + tripsFor(area, "out").length + "개 출발</small></div>");
     tripsFor(area, "out").forEach(function (t) { h.push(tripRow(t, n)); });
     h.push("</article>");
-    h.push('<article class="card glass"><div class="sec-head"><h3>실시간 차량 위치</h3></div><p class="tip">학교가 운영하는 <b>MNU버스로</b>에서 노선별 실시간 차량 위치를 볼 수 있어요. 헤이영캠퍼스 앱에서 ‘MNU버스로’를 고르거나, 학교 홈페이지 통학버스 메뉴의 ‘MNU버스로 바로가기’를 누르세요.</p><a class="btn ghost" href="https://www.mokpo.ac.kr/www/276/subview.do" target="_blank" rel="noopener">학교 통학버스 페이지 열기</a></article>');
+    h.push('<article class="card glass"><div class="sec-head"><h3>실시간 차량 위치</h3><small>학교 통학버스 시스템</small></div><p class="tip">각 버스의 <b>노선·정류장 보기</b>를 누르면 학교 통학버스 시스템에서 그 노선의 정류장을 바로 열어요. <b>차량 위치</b>에서는 지금 운행 중인 통학버스의 위치를 볼 수 있어요. 운행 시간이 아니면 ‘운행중인 차량이 없습니다’로 나와요.</p><div class="btn-row"><a class="btn blue" href="' + UNIBUS_LOCATION + '" target="_blank" rel="noopener">운행 중인 차량 위치 보기 ↗</a><a class="btn ghost" href="' + UNIBUS + '#!/line" target="_blank" rel="noopener">전체 노선 및 정거장 ↗</a></div></article>');
     h.push('<article class="card glass"><div class="sec-head"><h3>다른 교통편</h3><small>시각은 각 운영 기관 확인</small></div>');
     OTHER_TRANSIT.forEach(function (o) { h.push('<div class="rest-row" style="grid-template-columns:1fr"><span><span class="n">' + esc(o.name) + '</span><br><span class="p">' + esc(o.note) + "</span></span></div>"); });
     h.push("</article>");
     h.push('<article class="card glass"><div class="sec-head"><h3>데이터 출처</h3></div><ul class="src-list">' +
       "<li>통학버스 노선·출발 시각·운행 요일: 국립목포대 학생지원과 「2026학년도 2학기 통학버스 노선표(안)」 (광주권·목포권·해남권 전체)</li>" +
-      "<li>실시간 위치 서비스(MNU버스로) 안내: 국립목포대 2026학년도 편입생 모집요강</li>" +
+      "<li>노선 번호·차량 위치: 국립목포대 통학버스 시스템(mokpo.unibus.kr) 노선 및 정거장, 차량위치조회 페이지</li>" +
       "<li>건물 코드: 국립목포대 캠퍼스맵 (A09 중앙도서관, A14 학생회관, A60 플라자60, B15 인문대학, B17 교수회관, C30·C31 자연과학대학 등)</li>" +
       "<li>캠퍼스 주소: 전남 무안군 청계면 영산로 1666</li>" +
       "<li>추정값: 버스 출발부터 도림캠퍼스 도착까지 시간, 건물 간 도보 시간, 개략도 배치, 캠퍼스 중심 좌표</li></ul>" +
