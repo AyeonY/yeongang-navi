@@ -73,7 +73,9 @@
 
 ## 6. 실행 방법
 
-- 배포 링크: https://claude.ai/artifact/ExPW2SjGT6VwfZMPbmhMXM (Claude 아티팩트. 공유 설정 후 다른 사람도 열 수 있음)
+- 배포 링크(GitHub Pages): https://ayeony.github.io/yeongang-navi/ (현재 위치 기능 사용 가능)
+- 저장소: https://github.com/AyeonY/yeongang-navi
+- 미리보기(Claude 아티팩트): https://claude.ai/artifact/ExPW2SjGT6VwfZMPbmhMXM (위치 기능은 이 화면에서 막힘)
 - 로컬 실행: `index.html`을 브라우저로 열면 됩니다. 설치할 것은 없습니다.
 
 ## 7. 파일 구성
