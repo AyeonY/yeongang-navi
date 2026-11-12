@@ -220,6 +220,7 @@ button, input, select { font: inherit; color: inherit; }
 .route-card .top b { font-size: 15px; }
 .route-card .time { font-family: var(--font-display); font-size: 24px; font-weight: 500; }
 .route-card .stops { font-size: 13px; color: var(--muted); }
+.route-card details summary { cursor: pointer; color: var(--blue); font-size: 13px; }
 .route-card .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .src-list { margin: 0; padding-left: 18px; font-size: 13px; display: grid; gap: 4px; }
 .src-list a { color: var(--blue); }
@@ -282,7 +283,7 @@ button, input, select { font: inherit; color: inherit; }
     <section class="view" id="view-timetable" hidden></section>
     <section class="view" id="view-bus" hidden></section>
   </main>
-  <p class="foot-note">통학버스 시각은 학교 공지 기준이며, 운행 전 학교 공지와 MNU버스로에서 한 번 더 확인하세요.</p>
+  <p class="foot-note">통학버스 시각은 2026학년도 2학기 노선표(안) 기준이며, 운행 전 MNU버스로에서 한 번 더 확인하세요.</p>
 </div>
 
 <nav class="tabbar glass" aria-label="주요 화면">
@@ -325,27 +326,13 @@ button, input, select { font: inherit; color: inherit; }
   var BLD_ORDER = ["ENG", "B15", "B17", "C30", "C31", "A60", "A14", "A09", "A08"];
   var ROAD_X = 252, ROAD_Y = 178, HUB = [ROAD_X, ROAD_Y];
 
-  // 목포권 통학버스: 2026학년도 1학기 노선표(안)과 2024학년도 노선표에서 확인된 노선·시각만 수록
-  // ride: 승차 지점에서 도림캠퍼스까지 소요 시간(분). 공지에 도착 시각이 없어 추정값이며 앱에서 바꿀 수 있음
-  var ROUTES_DEFAULT = [
-    { id: "okam", dir: "in", name: "옥암·남악 노선", from: "옥암주공 승강장", dep: "08:10", ride: 30,
-      stops: ["옥암주공 승강장(시민문화체육센터 건너편)", "LG베스트샵 앞 승강장", "남악애시앙 승강장", "도림캠퍼스"], src: "2026-1학기 노선표(안)" },
-    { id: "sinan", dir: "in", name: "신안병원 노선", from: "신안병원 건너편", dep: "08:10", ride: 35,
-      stops: ["신안병원 건너편", "서울갈비", "(구)MBC방송국", "버스터미널 건너편 승강장", "석현동 버스승강장(GS칼텍스 앞)", "도림캠퍼스"], src: "2024 노선표 · 2026-1학기 노선 유지" },
-    { id: "yonghae", dir: "in", name: "용해동 신안인스빌 노선", from: "용해동 신안인스빌", dep: "08:10", ride: 35,
-      stops: ["용해동 신안인스빌", "하당 청담유성형외과", "장난감할인마트 앞 승강장", "석현동 버스승강장", "도림캠퍼스"], src: "2024 노선표" },
-    { id: "gold", dir: "in", name: "용해동 골드클래스 노선", from: "용해동 골드클래스 705동 앞", dep: "09:30", ride: 30,
-      stops: ["용해동 골드클래스 705동 앞", "포미타운 105동 건너편", "도림캠퍼스"], src: "2026-1학기 노선표(안)" },
-    { id: "term-in", dir: "in", name: "목포버스터미널 왕복", from: "목포버스터미널 건너편 승강장", dep: "12:30", ride: 25,
-      stops: ["목포버스터미널 건너편 승강장", "석현동 버스승강장", "도림캠퍼스"], src: "2026-1학기 노선표(안)" },
-    { id: "term-out", dir: "out", name: "목포버스터미널행", from: "도림캠퍼스", dep: "12:00", ride: 25,
-      stops: ["도림캠퍼스", "석현동 인성학교", "목포시외버스터미널"], src: "2026-1학기 노선표(안)" },
-    { id: "okam-out", dir: "out", name: "옥암·남악 방면", from: "도림캠퍼스", dep: "18:20", ride: 30,
-      stops: ["도림캠퍼스", "옥암주공 승강장", "LG베스트샵 앞 승강장", "오룡주공 승강장", "도청 프라자 승강장", "남악애시앙 승강장"], src: "2026-1학기 노선표(안)" },
-    { id: "sinan-out", dir: "out", name: "신안병원 방면", from: "도림캠퍼스", dep: "18:20", ride: 35,
-      stops: ["도림캠퍼스", "목포역", "신안병원"], src: "2026-1학기 노선표(안)" }
-  ];
-  var BUS_BASIS = "2026학년도 1학기 노선표(안) 기준 · 2학기 공지(2026.08.18) 대조 필요";
+  // 통학버스: 국립목포대 학생지원과 「2026학년도 2학기 통학버스 노선표(안)」 전체(광주권·목포권·해남권)
+  // place: 등교는 승차 지점, 하교는 종착 지점 / days: 운행 요일(1=월) / fri: 금요일 출발 시각이 다를 때 / n: 차량 대수
+  // eta: 출발부터 도림캠퍼스 도착까지 분. 노선표에 캠퍼스 도착 시각이 없어 마지막 정류장 시각 + 이동 시간으로 추정한 값이며 앱에서 바꿀 수 있음
+  var TRIPS_DEFAULT = [{"id":"t00","area":"광주권","dir":"in","place":"염주체육관건너편육교","dep":"07:10","days":[1,2,3,4,5],"fri":null,"stops":["염주체육관건너편육교 (07:10)","서광주우체국건너편 CU편의점 (07:14)","구호남대 한마음신경정신과 (07:18)","세정아울렛버스승강장 (07:21)","구송정파출소건너편 할리매장옆승강장 (07:27)","송정역시외버스승강장 (07:30)","도림캠퍼스"],"note":"","n":1,"eta":70},{"id":"t01","area":"광주권","dir":"in","place":"금호지구중흥Ⓐ건너편승강장","dep":"07:10","days":[1,2,3,4,5],"fri":null,"stops":["금호지구중흥Ⓐ건너편승강장 (07:10)","구송정파출소건너편 할리매장옆승강장 (07:18)","선운휴먼시아버스승강장 (07:23)","도림캠퍼스"],"note":"","n":1,"eta":68},{"id":"t02","area":"광주권","dir":"in","place":"시립장애인복지관육교","dep":"07:00","days":[1,2,3,4,5],"fri":null,"stops":["시립장애인복지관육교 (07:00)","문화신협 운암지점 (07:04)","신세계백화점육교 (07:08)","추선회관 (07:10)","구호남대 한마음신경정신과 (07:14)","세정아울렛버스승강장 (07:17)","구송정파출소건너편 할리매장옆승강장 (07:20)","송정역시외버스승강장 (07:24)","도림캠퍼스"],"note":"","n":1,"eta":74},{"id":"t03","area":"광주권","dir":"in","place":"전남대정문","dep":"07:00","days":[1,2,3,4,5],"fri":null,"stops":["전남대정문 (07:00)","NC백화점 광주역점 (07:06)","평화빌딩앞 (07:11)","서구청버스승강장 (07:13)","추선회관 (07:15)","구호남대 한마음신경정신과 (07:18)","세정아울렛버스승강장 (07:20)","구송정파출소건너편 할리매장옆승강장 (07:25)","송정역시외버스승강장 (07:30)","도림캠퍼스"],"note":"","n":1,"eta":80},{"id":"t04","area":"광주권","dir":"in","place":"일곡119안전센터","dep":"06:50","days":[1,2,3,4,5],"fri":null,"stops":["일곡119안전센터 (06:50)","연제동롯데칠성승강장 (06:55)","용두주공승강장 (07:00)","광주우편집중국승강장 (07:03)","첨단응암공원승강장 (07:06)","수완2차우미린Ⓐ승강장 (07:09)","현진에버빌Ⓐ승강장 (07:10)","어등산약국 (07:13)","월곡동부영Ⓐ승강장 (07:17)","도림캠퍼스"],"note":"","n":1,"eta":82},{"id":"t05","area":"광주권","dir":"in","place":"첨단응암공원승강장","dep":"07:10","days":[1,2,3,4,5],"fri":null,"stops":["첨단응암공원승강장 (07:10)","수완2차우미린Ⓐ승강장 (07:13)","현진에버빌Ⓐ승강장 (07:14)","수완W여성병원 (07:15)","어등산약국 (07:17)","월곡동부영Ⓐ승강장 (07:21)","도림캠퍼스"],"note":"","n":1,"eta":66},{"id":"t06","area":"광주권","dir":"in","place":"남부대정문","dep":"07:00","days":[1,2,3,4,5],"fri":null,"stops":["남부대정문 (07:00)","신창동우체국 (07:05)","우미Ⓐ건너편 비아신협 (07:07)","운남주공1단지육교 KCC페인트 (07:09)","운남주공5단지육교 목련마을승강장 (07:10)","운남동 삼성아파트건너편승강장 (07:12)","월곡동부영Ⓐ승강장 (07:15)","구송정파출소건너편 할리매장옆승강장 (07:20)","송정역시외버스승강장 (07:25)","도림캠퍼스"],"note":"","n":1,"eta":75},{"id":"t07","area":"광주권","dir":"in","place":"월곡동부영Ⓐ승강장","dep":"07:15","days":[1,2,3,4,5],"fri":null,"stops":["월곡동부영Ⓐ승강장 (07:15)","광산중학교건너편승강장 (07:16)","구송정파출소건너편 할리매장옆승강장 (07:20)","송정역시외버스승강장 (07:25)","도림캠퍼스"],"note":"","n":1,"eta":60},{"id":"t08","area":"광주권","dir":"in","place":"송정역시외버스승강장","dep":"07:30","days":[1,2,3,4,5],"fri":null,"stops":["송정역시외버스승강장 (07:30)","에너지밸리캠퍼스 (08:00) · 화,수운행","무안우체국 (08:25)","도림캠퍼스"],"note":"에너지밸리","n":1,"eta":70},{"id":"t09","area":"광주권","dir":"in","place":"용두주공","dep":"09:20","days":[1,2,3,4],"fri":null,"stops":["용두주공 (09:20)","광주우편집중국승강장 (09:23)","첨단응암공원승강장 (09:28)","수완2차우미린Ⓐ승강장 (09:31)","현진에버빌Ⓐ승강장 (09:32)","수완W여성병원 (09:33)","어등산약국 (09:35)","월곡동부영Ⓐ승강장 (09:39)","광산중학교건너편승강장 (09:40)","구송정파출소건너편 할리매장옆승강장 (09:43)","송정역시외버스승강장 (09:48)","도림캠퍼스"],"note":"","n":1,"eta":78},{"id":"t10","area":"광주권","dir":"in","place":"남부대정문","dep":"09:20","days":[1,2,3,4],"fri":null,"stops":["남부대정문 (09:20)","신창동우체국 (09:25)","우미Ⓐ건너편 비아신협 (09:27)","운남주공1단지육교 KCC페인트 (09:29)","운남주공5단지육교 목련마을승강장 (09:30)","운남동 삼성아파트건너편승강장 (09:32)","월곡동부영Ⓐ승강장 (09:35)","송정역시외버스승강장 (09:45)","에너지밸리캠퍼스 (10:15) · 화,수운행","도림캠퍼스"],"note":"에너지밸리","n":1,"eta":75},{"id":"t11","area":"광주권","dir":"in","place":"문흥동샛터코아건너편 광주은행문흥지점","dep":"06:50","days":[1,2,3,4,5],"fri":null,"stops":["문흥동샛터코아건너편 광주은행문흥지점 (06:50)","문화동홈플러스건너편 (06:52)","북부소방서우산119안전센터 (06:54)","계림동E마트 (06:58)","백림약국건너편 (07:00)","산수교회건너편승강장 (07:02)","조선대건너편우측10m지점 공대방향 (07:07)","동성고육교옆 (07:20)","효천역승강장 (07:24)","호남원예고앞 (07:35)","천주교성당승강장 (07:38)","도림캠퍼스"],"note":"","n":1,"eta":88},{"id":"t12","area":"광주권","dir":"in","place":"31사단정문삼거리","dep":"06:50","days":[1,2,3,4,5],"fri":null,"stops":["31사단정문삼거리 (06:50)","오치사거리 책돌이도서관승강장 (06:52)","북구청보건소사거리 메가박스건너편경민회관 (06:55)","광주중앙교회건너편 국제열쇠 (07:00)","롯데백화점건너편 금호할인마트 (07:01)","독립로알뜰주유소 (07:03)","백운초정문 (07:05)","동성고육교옆 (07:15)","천주교성당승강장 (07:35)","도림캠퍼스"],"note":"","n":1,"eta":85},{"id":"t13","area":"광주권","dir":"in","place":"지원2동주민센터승강장 농협하나로마트","dep":"07:00","days":[1,2,3,4,5],"fri":null,"stops":["지원2동주민센터승강장 농협하나로마트 (07:00)","삼익세라믹Ⓐ정문 남광주농협앞 (07:02)","학동시장버스승강장 부흥교회앞 (07:03)","양림휴먼시아Ⓐ (07:06)","빅스포앞 (07:15)","동성고육교옆 (07:18)","효천역승강장 (07:20)","남평 탑모텔 (07:25)","천주교성당승강장 (07:35)","도림캠퍼스"],"note":"","n":1,"eta":75},{"id":"t14","area":"광주권","dir":"in","place":"LG전자베스트샵용봉점","dep":"07:00","days":[1,2,3,4,5],"fri":null,"stops":["LG전자베스트샵용봉점 (07:00)","서광주농협동운지점 (07:03)","광천파출소건너편 (07:05)","상공회의소 (07:07)","농협월산동지점 (07:09)","광주은행주월지점 (07:10)","빅스포앞 (07:13)","동성고육교옆 (07:16)","효천역승강장 (07:18)","천주교성당승강장 (07:33)","도림캠퍼스"],"note":"","n":1,"eta":73},{"id":"t15","area":"광주권","dir":"in","place":"풍암지구대주Ⓐ사거리","dep":"07:10","days":[1,2,3,4,5],"fri":null,"stops":["풍암지구대주Ⓐ사거리 (07:10)","빛가람동주민센터 (07:37)","에너지밸리캠퍼스 (07:50) · 화,수 운행","다시공영버스터미널 (07:55)","고막원광목기사식당 (08:00)","도림캠퍼스"],"note":"에너지밸리","n":1,"eta":75},{"id":"t16","area":"광주권","dir":"in","place":"동성고육교옆","dep":"07:30","days":[1,2,3,4,5],"fri":null,"stops":["동성고육교옆 (07:30)","효천역승강장 (07:32)","천주교성당승강장 (07:47)","다시공영버스터미널 (07:55)","고막원광목기사식당 (08:00)","함평역건너편 GS LPG주유소 (08:05)","도림캠퍼스"],"note":"","n":1,"eta":60},{"id":"t17","area":"광주권","dir":"in","place":"풍암지구대주Ⓐ사거리","dep":"09:10","days":[1,2,3,4],"fri":null,"stops":["풍암지구대주Ⓐ사거리 (09:10)","빅스포앞 (09:16)","동성고육교옆 (09:20)","효천역승강장 (09:22)","남평 탑모텔 (09:35)","천주교성당승강장 (09:50)","도림캠퍼스"],"note":"","n":1,"eta":80},{"id":"t18","area":"광주권","dir":"in","place":"동성고육교옆","dep":"09:30","days":[1,2,3,4],"fri":null,"stops":["동성고육교옆 (09:30)","효천역승강장 (09:32)","빛가람동주민센터 (09:47)","에너지밸리캠퍼스 (09:56) · 화,수운행","다시공영버스터미널 (10:00)","고막원광목기사식당 (10:03)","무안우체국","도림캠퍼스"],"note":"에너지밸리","n":1,"eta":58},{"id":"t19","area":"광주권","dir":"out","place":"일곡119안전센터","dep":"15:30","days":[1,2,3,4],"fri":null,"stops":["송정역","구송정파출소","광산중학교","월곡동부영Ⓐ","어등산약국","수완W여성병원","현진에버빌Ⓐ","수완2차우미린Ⓐ","첨단응암공원","광주우편집중국승강장","용두주공","연제동롯데칠성","일곡119안전센터"],"note":"","n":1,"eta":null},{"id":"t20","area":"광주권","dir":"out","place":"용두주공","dep":"16:30","days":[1,2,3,4,5],"fri":null,"stops":["에너지밸리캠퍼스 (17:05) · 화,수운행","송정역","광산중학교","월곡동부영Ⓐ","어등산약국","수완W여성병원","첨단응암공원","광주우편집중국승강장","용두주공 * 운전원은 에너지밸리캠퍼스 탑승 인원을 감안하여 좌석 확보"],"note":"에너지밸리 화,수 운행","n":1,"eta":null},{"id":"t21","area":"광주권","dir":"out","place":"풍암지구대주Ⓐ사거리","dep":"17:30","days":[1,2,3,4,5],"fri":"15:30","stops":["서광주우체국","염주체육관","금호지구중흥Ⓐ","풍암지구대주Ⓐ사거리"],"note":"","n":1,"eta":null},{"id":"t22","area":"광주권","dir":"out","place":"LG전자베스트샵용봉점","dep":"17:30","days":[1,2,3,4,5],"fri":"15:30","stops":["송정역","구송정파출소","세정아울렛건너편","구호남대","추선회관","광진빌딩(양동초입구)","NC백화점광주역점","전남대정문","LG전자베스트샵용봉점"],"note":"","n":1,"eta":null},{"id":"t23","area":"광주권","dir":"out","place":"남부대","dep":"17:30","days":[1,2,3,4,5],"fri":"15:30","stops":["무안우체국","삼성아파트","신가주공5단지","신가주공1단지","신가사거리","신창동우체국","남부대"],"note":"","n":1,"eta":null},{"id":"t24","area":"광주권","dir":"out","place":"용두주공","dep":"17:30","days":[1,2,3,4,5],"fri":"15:30","stops":["광산중학교","월곡동부영Ⓐ","어등산약국","수완W여성병원","현진에버빌Ⓐ","수완2차우미린Ⓐ","첨단응암공원","광주우편집중국승강장","용두주공"],"note":"","n":1,"eta":null},{"id":"t25","area":"광주권","dir":"out","place":"풍암지구대주Ⓐ사거리","dep":"18:20","days":[1,2,3,4,5],"fri":null,"stops":["서광주우체국","염주체육관","금호지구중흥Ⓐ","풍암지구대주Ⓐ사거리"],"note":"","n":1,"eta":null},{"id":"t26","area":"광주권","dir":"out","place":"용두주공","dep":"18:20","days":[1,2,3,4,5],"fri":null,"stops":["광산중학교","월곡동부영Ⓐ","어등산약국","수완W여성병원","첨단응암공원","광주우편집중국승강장","용두주공"],"note":"","n":1,"eta":null},{"id":"t27","area":"광주권","dir":"out","place":"남부대","dep":"18:20","days":[1,2,3,4,5],"fri":null,"stops":["무안우체국","삼성아파트","신가주공5단지","신가주공1단지","신가사거리","신창동우체국","남부대"],"note":"","n":1,"eta":null},{"id":"t28","area":"광주권","dir":"out","place":"LG전자베스트샵용봉점","dep":"18:20","days":[1,2,3,4,5],"fri":null,"stops":["송정역","구송정파출소","세정아울렛건너편","구호남대","추선회관","광진빌딩(양동초입구)","NC백화점광주역점","전남대정문","LG전자베스트샵용봉점"],"note":"","n":1,"eta":null},{"id":"t29","area":"광주권","dir":"out","place":"용두주공","dep":"21:00","days":[1,2,3,4],"fri":null,"stops":["송정역","구송정파출소","광산중학교","월곡동부영Ⓐ","어등산약국","수완W여성병원","첨단응암공원","광주우편집중국승강장","용두주공"],"note":"(야간)","n":1,"eta":null},{"id":"t30","area":"광주권","dir":"out","place":"문흥동샛터코아","dep":"15:30","days":[1,2,3,4],"fri":null,"stops":["천주교성당","탑 모텔","효천역","남광주농협진월동지점","조선대","산수오거리","백림약국","동신고","북광주전화국","문흥동샛터코아"],"note":"","n":1,"eta":null},{"id":"t31","area":"광주권","dir":"out","place":"동림센타","dep":"16:30","days":[1,2,3,4,5],"fri":null,"stops":["에너지밸리캠퍼스 (17:05) · 화,수운행","천주교성당","호남원예고","빛가람동주민센터","효천역","동성고육교","대광여고","신우아파트","상공회의소","신세계백화점","광천파출소","운암주공3단지Ⓐ","동림센터 * 운전원은 에너지밸리캠퍼스 탑승 인원을 감안하여 좌석 확보"],"note":"에너지밸리 화,수 운행","n":1,"eta":null},{"id":"t32","area":"광주권","dir":"out","place":"문흥동샛터코아","dep":"17:30","days":[1,2,3,4,5],"fri":"15:30","stops":["천주교성당","탑 모텔","효천역","남광주농협진월동지점","조선대","산수오거리","백림약국","동신고","북광주전화국","문흥동샛터코아"],"note":"","n":1,"eta":null},{"id":"t33","area":"광주권","dir":"out","place":"일곡병원","dep":"17:30","days":[1,2,3,4,5],"fri":"15:30","stops":["고막원 광목기사식당 건너편 횡단보도","다시공영버스터미널","빛가람동주민센터","효천역","남광주농협진월동지점","백운광장","독립로알뜰주유소건너편","한미쇼핑","구터미널","한국화장품","북구청","한국전력공사","31사단정문","일곡병원"],"note":"","n":1,"eta":null},{"id":"t34","area":"광주권","dir":"out","place":"문흥동샛터코아","dep":"18:20","days":[1,2,3,4,5],"fri":null,"stops":["함평역","천주교성당","지원동삼영예식장","삼익세라믹Ⓐ","학동시장","조선대","산수오거리","백림약국","동신고","북광주전화국","문흥동샛터코아"],"note":"","n":1,"eta":null},{"id":"t35","area":"광주권","dir":"out","place":"일곡119안전센터","dep":"18:20","days":[1,2,3,4,5],"fri":null,"stops":["천주교성당","효천역","남광주농협진월동지점","대광여고","백운광장","독립로알뜰주유소건너편","한미쇼핑","구터미널","한국화장품","북구청","한국전력공사","31사단정문","일곡119안전센터"],"note":"","n":1,"eta":null},{"id":"t36","area":"광주권","dir":"out","place":"동림센타","dep":"18:20","days":[1,2,3,4,5],"fri":null,"stops":["고막원 광목기사식당 건너편 횡단보도","다시공영버스터미널","빛가람동주민센터","탑 모텔","신우Ⓐ","구동강한의원","상공회의소","신세계백화점","광천파출소","운암주공3단지Ⓐ","동림센터"],"note":"","n":1,"eta":null},{"id":"t37","area":"광주권","dir":"out","place":"남광주농협진월동지점","dep":"21:00","days":[1,2,3,4],"fri":null,"stops":["무안우체국","고막원 광목기사식당 건너편 횡단보도","다시공영버스터미널","천주교성당","빛가람동주민센터","탑 모텔","효천역","남광주농협진월동지점"],"note":"(야간)","n":1,"eta":null},{"id":"t38","area":"목포권","dir":"in","place":"대성초건너편승강장","dep":"08:00","days":[1,2,3,4,5],"fri":null,"stops":["대성초건너편승강장 (08:00)","보건소사거리","신안비치Ⓐ1차건너편 T´Station(타이어)","연산동현대산업개발Ⓐ","서해안장례식장건너편승강장","용해동골드클래스705동앞","포미타운105동건너편","도림캠퍼스"],"note":"월~목 증차","n":3,"eta":35},{"id":"t39","area":"목포권","dir":"in","place":"용해동골드클래스705동앞","dep":"08:15","days":[1,2,3,4,5],"fri":null,"stops":["용해동골드클래스705동앞 (08:15)","포미타운105동건너편","도림캠퍼스"],"note":"","n":1,"eta":20},{"id":"t40","area":"목포권","dir":"in","place":"대성초건너편승강장","dep":"09:20","days":[1,2,3,4,5],"fri":null,"stops":["대성초건너편승강장 (09:20)","보건소사거리","신안비치Ⓐ1차건너편 T´Station(타이어)","연산동현대산업개발Ⓐ","서해안장례식장건너편승강장","도림캠퍼스"],"note":"","n":1,"eta":35},{"id":"t41","area":"목포권","dir":"in","place":"용해동골드클래스705동앞","dep":"09:30","days":[1,2,3,4,5],"fri":null,"stops":["용해동골드클래스705동앞 (09:30)","포미타운105동건너편","도림캠퍼스"],"note":"","n":1,"eta":20},{"id":"t42","area":"목포권","dir":"in","place":"신안병원건너편","dep":"08:00","days":[1,2,3,4,5],"fri":null,"stops":["신안병원건너편 (08:00)","목포역한국은행건너편","구연동육교 민안경원","2호광장 서울갈비","MBC방송국","버스터미널건너편 시내버스승강장","석현동버스승강장","도림캠퍼스"],"note":"","n":1,"eta":40},{"id":"t43","area":"목포권","dir":"in","place":"버스터미널건너편 시내버스승강장","dep":"08:15","days":[1,2,3,4,5],"fri":null,"stops":["버스터미널건너편 시내버스승강장 (08:15)","석현동버스승강장","도림캠퍼스"],"note":"","n":1,"eta":20},{"id":"t44","area":"목포권","dir":"in","place":"용해동 신안인스빌승강장","dep":"08:10","days":[1,2,3,4,5],"fri":null,"stops":["용해동 신안인스빌승강장 (08:10)","하당 청담유성형외과","장난감할인마트앞승강장","석현동버스승강장","도림캠퍼스"],"note":"월~목 증차","n":3,"eta":25},{"id":"t45","area":"목포권","dir":"in","place":"용해동 신안인스빌승강장","dep":"09:20","days":[1,2,3,4,5],"fri":null,"stops":["용해동 신안인스빌승강장 (09:20)","하당 청담유성형외과","장난감할인마트앞승강장","석현동버스승강장","도림캠퍼스"],"note":"","n":1,"eta":25},{"id":"t46","area":"목포권","dir":"in","place":"옥암주공 승강장","dep":"08:10","days":[1,2,3,4,5],"fri":null,"stops":["옥암주공 승강장(시민문화체육센터 건너편)","LG베스트샵 앞 승강장(전라남도보훈회관 건너편)","오룡주공 승강장(전라남도체육회관 건너편)","도청프라자 승강장(도청, 만남의광장건너편)","근화베아체 승강장(전라남도교육청 건너편)","남악애시앙 승강장","도림캠퍼스"],"note":"월~목 증차","n":2,"eta":25},{"id":"t47","area":"목포권","dir":"in","place":"도청프라자 승강장","dep":"08:15","days":[1,2,3,4,5],"fri":null,"stops":["도청프라자 승강장(도청, 만남의광장건너편)","근화베아체 승강장(전라남도교육청 건너편)","남악애시앙 승강장","도림캠퍼스"],"note":"","n":1,"eta":15},{"id":"t48","area":"목포권","dir":"in","place":"옥암주공 승강장","dep":"09:20","days":[1,2,3,4,5],"fri":null,"stops":["옥암주공 승강장(시민문화체육센터 건너편)","LG베스트샵 앞 승강장(전라남도보훈회관 건너편)","오룡주공 승강장(전라남도체육회관 건너편)","도청프라자 승강장(도청, 만남의광장건너편)","근화베아체 승강장(전라남도교육청 건너편)","남악애시앙 승강장","도림캠퍼스"],"note":"","n":1,"eta":25},{"id":"t49","area":"목포권","dir":"in","place":"제일풍경채리버파크105동앞","dep":"08:00","days":[1,2,3,4,5],"fri":null,"stops":["제일풍경채리버파크105동앞 (08:00)","호반써밋오룡2차Ⓐ204동앞","오룡푸르지오1단지(103동 하천건너 큰도로변)","오룡중흥S클래스승강장(103동건너편)","오룡푸르지오파르세나105동앞","남악센트레빌리버파크승강장(120동 건너편)","빅스토어식자재마트앞 승강장","남악펠리시티3차건너편 승강장(맥도날드옆)","도청프라자 승강장(도청, 만남의광장건너편)","근화베아체 승강장(전라남도교육청 건너편)","남악애시앙 승강장","도림캠퍼스"],"note":"","n":1,"eta":35},{"id":"t50","area":"목포권","dir":"out","place":"신안병원","dep":"16:40","days":[1,2,3,4,5],"fri":null,"stops":["도림캠퍼스","석현동인성학교","버스터미널","홈플러스","2호광장","구연동육교","목포역","신안병원"],"note":"","n":2,"eta":null},{"id":"t51","area":"목포권","dir":"out","place":"대성초","dep":"16:40","days":[1,2,3,4,5],"fri":null,"stops":["도림캠퍼스","포미타운105동","용해동골드클래스705동앞","서해안장래식장승강장","연산동현대산업개발Ⓐ","신안비치Ⓐ1차","보건소사거리","대성초"],"note":"","n":2,"eta":null},{"id":"t52","area":"목포권","dir":"out","place":"용해동신안인스빌","dep":"16:40","days":[1,2,3,4,5],"fri":null,"stops":["도림캠퍼스","목포이비인후과","동신대학교목포한방병원","용해동신안인스빌"],"note":"월~목 증차","n":2,"eta":null},{"id":"t53","area":"목포권","dir":"out","place":"전남도교육청오룡지구","dep":"16:40","days":[1,2,3,4],"fri":null,"stops":["남악애시앙 승강장 건너편","전라남도교육청 승강장","남악중앙시장 승강장","동부센트레빌승강장","오룡푸르지오파르세나 승강장","오룡중흥S클래스승강장","오룡푸르지오1단지(103동 건너편)","호반써밋오룡2차Ⓐ204동 건너편","제일풍경채리버파크105동 건너편"],"note":"","n":1,"eta":null},{"id":"t54","area":"목포권","dir":"out","place":"남악애시앙승강장","dep":"16:40","days":[1,2,3,4,5],"fri":null,"stops":["도림캠퍼스","옥암주공 승강장","LG베스트샵 앞 승강장","오룡주공 승강장","도청프라자 승강장","근화베아체 승강장","남악애시앙 승강장"],"note":"","n":1,"eta":null},{"id":"t55","area":"목포권","dir":"out","place":"용해동신안인스빌","dep":"18:10","days":[1,2,3,4,5],"fri":null,"stops":["도림캠퍼스","목포이비인후과","동신대학교목포한방병원","용해동신안인스빌"],"note":"","n":2,"eta":null},{"id":"t56","area":"목포권","dir":"out","place":"남악애시앙승강장","dep":"18:10","days":[1,2,3,4,5],"fri":null,"stops":["도림캠퍼스","옥암주공 승강장","LG베스트샵 앞 승강장","오룡주공 승강장","도청프라자 승강장","근화베아체 승강장","남악애시앙 승강장"],"note":"","n":1,"eta":null},{"id":"t57","area":"목포권","dir":"out","place":"남악오룡푸르지오","dep":"18:10","days":[1,2,3,4,5],"fri":null,"stops":["남악애시앙 승강장 건너편","전라남도교육청 승강장","전남도청 승강장","남악펠리시티3차 회룡마을 승강장","남악중앙시장 승강장","동부센트레빌승강장","오룡푸르지오파르세나 승강장","오룡중흥S클래스승강장","오룡푸르지오1단지(103동 건너편)","호반써밋오룡2차Ⓐ204동 건너편","제일풍경채리버파크105동 건너편"],"note":"","n":1,"eta":null},{"id":"t58","area":"목포권","dir":"out","place":"대성초","dep":"18:10","days":[1,2,3,4,5],"fri":null,"stops":["도림캠퍼스","포미타운105동","용해동골드클래스705동앞","서해안장래식장승강장","연산동현대산업개발Ⓐ","신안비치Ⓐ1차","보건소사거리","대성초"],"note":"","n":2,"eta":null},{"id":"t59","area":"목포권","dir":"out","place":"신안병원","dep":"18:10","days":[1,2,3,4,5],"fri":null,"stops":["도림캠퍼스","석현동인성학교","버스터미널","홈플러스","2호광장","구연동육교","목포역","신안병원"],"note":"","n":1,"eta":null},{"id":"t60","area":"목포권","dir":"out","place":"목포시외버스터미널","dep":"12:10","days":[1,2,3,4],"fri":null,"stops":["도림캠퍼스","석현동 인성학교","목포시외버스터미널(온누리약국앞)"],"note":"","n":1,"eta":null},{"id":"t61","area":"목포권","dir":"in","place":"목포시외버스터미널","dep":"12:30","days":[1,2,3,4],"fri":null,"stops":["목포시외버스터미널(버스터미널 방향 온누리약국 앞)","석현동 버스승강장","도림캠퍼스"],"note":"","n":1,"eta":20},{"id":"t62","area":"해남권","dir":"in","place":"남향예식장 해남터미널건너편","dep":"07:00","days":[1,2,3,4,5],"fri":null,"stops":["남향예식장 해남터미널건너편 (07:00)","옥천농협 (07:02)","강진터미널 (07:20)","성전터미널 (07:30)","영암향군회관버스정류장 (07:45)","독천부산식당앞 (08:00)","삼호보건지소건너편큰도로변 (08:05)","인공폭포 승강장 (08:10)","도림캠퍼스"],"note":"","n":1,"eta":95},{"id":"t63","area":"해남권","dir":"out","place":"해남터미널","dep":"18:00","days":[1,2,3,4,5],"fri":null,"stops":["사랑의교회 승강장","삼호보건지소큰도로변","독천 부산식당","영암향군회관","성전터미널","강진터미널","옥천농협","해남터미널"],"note":"","n":1,"eta":null}];
+  var AREAS = ["목포권", "광주권", "해남권"];
+  var BUS_BASIS = "2026학년도 2학기 통학버스 노선표(안) 기준";
+  var BUS_NOTICE = "노선과 출발 시간은 날씨·탑승 인원 등에 따라 조정될 수 있어요. 문의: 학생지원과 061-450-2033";
   var OTHER_TRANSIT = [
     { name: "210번 시내버스", note: "캠퍼스 안을 지나는 노선. 학내 승강장이 2025년 11월에 바뀌었어요." },
     { name: "240-1번 농어촌버스(무안군)", note: "무안터미널 ↔ 청계, '목포대학교' 정류장에 서요." },
@@ -379,8 +366,9 @@ button, input, select { font: inherit; color: inherit; }
 
   var state = {
     timetable: load("mnu_timetable", null) || withIds(SAMPLE_TIMETABLE),
-    routes: load("mnu_routes", null) || ROUTES_DEFAULT.map(function (r) { return Object.assign({}, r); }),
-    settings: Object.assign({ mode: "demo", day: 1, min: 470, loc: "auto", myRoute: "okam", useGeo: false }, load("mnu_settings", {})),
+    trips: load("mnu_trips_2026_2", null) || JSON.parse(JSON.stringify(TRIPS_DEFAULT)),
+    settings: Object.assign({ mode: "demo", day: 1, min: 470, loc: "auto", myArea: "목포권", myBoard: "옥암주공 승강장", myDest: "남악애시앙승강장", useGeo: false }, load("mnu_settings", {})),
+    busArea: null, editingTrip: null,
     campus: Object.assign({}, CAMPUS, load("mnu_campus", {})),
     geo: { status: "idle", dist: null },
     tab: "today", stepsDone: {}, arrived: null, editingId: null, editingRoute: null
@@ -415,9 +403,16 @@ button, input, select { font: inherit; color: inherit; }
   function slackText(s) { return s >= 0 ? "여유 " + s + "분" : (-s) + "분 늦음"; }
   function dur(m) { return m >= 90 ? "<b>" + Math.floor(m / 60) + "</b>시간 <b>" + (m % 60) + "</b>분" : "<b>" + m + "</b>분"; }
   function isWeekday(d) { return d >= 1 && d <= 5; }
-  function routeById(id) { return state.routes.filter(function (r) { return r.id === id; })[0]; }
-  function inRoutes() { return state.routes.filter(function (r) { return r.dir === "in"; }).sort(function (a, b) { return toMin(a.dep) - toMin(b.dep); }); }
-  function outRoutes() { return state.routes.filter(function (r) { return r.dir === "out"; }).sort(function (a, b) { return toMin(a.dep) - toMin(b.dep); }); }
+  function tripById(id) { return state.trips.filter(function (t) { return t.id === id; })[0]; }
+  function depOn(t, day) { return day === 5 && t.fri ? t.fri : t.dep; }
+  function runsOn(t, day) { return t.days.indexOf(day) >= 0; }
+  function tripsFor(area, dir, day) {
+    return state.trips.filter(function (t) { return t.area === area && t.dir === dir && (day == null || runsOn(t, day)); })
+      .sort(function (a, b) { return toMin(day == null ? a.dep : depOn(a, day)) - toMin(day == null ? b.dep : depOn(b, day)); });
+  }
+  function isMine(t) { return t.area === state.settings.myArea && (t.dir === "in" ? t.place === state.settings.myBoard : t.place === state.settings.myDest); }
+  function daysLabel(t) { return t.days.length === 5 ? (t.fri ? "평일 · 금 " + t.fri : "평일") : "월~목"; }
+  function saveTrips() { save("mnu_trips_2026_2", state.trips); }
 
   function now() {
     if (state.settings.mode === "real") { var d = new Date(); return { day: d.getDay(), min: d.getHours() * 60 + d.getMinutes() }; }
@@ -453,18 +448,24 @@ button, input, select { font: inherit; color: inherit; }
     var c = ctx.next, start = toMin(c.start), inside = insideMin(c.room), walk;
     if (ctx.origin === "bus") {
       walk = walkFromStop(c.bld);
-      var trips = inRoutes().map(function (r) {
-        var arr = toMin(r.dep) + r.ride + walk + inside;
-        return { route: r, dep: toMin(r.dep), arr: arr, slack: start - arr, mine: r.id === state.settings.myRoute };
-      });
       var day = (n.day + ctx.offset) % 7;
       if (!isWeekday(day)) return { type: "bus", trips: [], noService: true, walk: walk, inside: inside };
-      var shown = ctx.offset === 0 ? trips.filter(function (t) { return t.dep >= n.min; }) : trips;
-      var useful = shown.filter(function (t) { return t.slack > -60; });
-      var mine = shown.filter(function (t) { return t.mine; })[0] || null;
-      shown = useful.length ? useful : shown.slice(0, 1);
-      var best = shown.filter(function (t) { return t.slack >= 0; }).sort(function (a, b) { return b.dep - a.dep; })[0] || null;
-      return { type: "bus", trips: shown.slice(0, 4), mine: mine, best: best, walk: walk, inside: inside, missedMine: ctx.offset === 0 && !mine };
+      var all = tripsFor(state.settings.myArea, "in", day).map(function (t) {
+        var dep = toMin(depOn(t, day)), arr = dep + t.eta + walk + inside;
+        return { trip: t, dep: dep, arr: arr, slack: start - arr, mine: isMine(t) };
+      });
+      var upcoming = ctx.offset === 0 ? all.filter(function (t) { return t.dep >= n.min; }) : all;
+      var useful = upcoming.filter(function (t) { return t.slack > -30 && t.slack <= 45; });
+      var mine = upcoming.filter(function (t) { return t.mine && t.slack >= 0; }).sort(function (a, b) { return b.dep - a.dep; })[0]
+        || upcoming.filter(function (t) { return t.mine; })[0] || null;
+      var best = upcoming.filter(function (t) { return t.slack >= 0; }).sort(function (a, b) { return b.dep - a.dep; })[0] || null;
+      // 보여 줄 버스: 내 노선 → 늦지 않는 마지막 버스 → 나머지(출발 순), 최대 4대
+      var pick = [];
+      [mine, best].concat(useful).forEach(function (t) { if (t && pick.indexOf(t) < 0 && pick.length < 4) pick.push(t); });
+      if (!pick.length && upcoming.length) pick.push(upcoming[0]);
+      pick.sort(function (a, b) { return a.dep - b.dep; });
+      var hadMine = all.some(function (t) { return t.mine; });
+      return { type: "bus", trips: pick, mine: mine, best: best, walk: walk, inside: inside, missedMine: ctx.offset === 0 && hadMine && (!mine || mine.slack < 0), day: day };
     }
     walk = ctx.origin === "STOP" ? walkFromStop(c.bld) : walkBetween(ctx.origin, c.bld);
     var total = walk + inside, arr = n.min + total;
@@ -535,9 +536,9 @@ button, input, select { font: inherit; color: inherit; }
   }
 
   function busTripHtml(t, p) {
-    var s = statusOf(t.slack);
-    return '<div class="trip' + (t.mine ? " mine" : "") + '"><span class="dep">' + fmt(t.dep) + '</span><span class="info"><b>' + esc(t.route.name) + "</b><br><span>" + esc(t.route.from) + " 출발 · 강의실 " + fmt(t.arr) + " 도착</span></span>" +
-      '<span class="slack ' + s.cls + '">' + slackText(t.slack) + '</span><span class="tags">' + (t.mine ? '<span class="tag blue">내 노선</span>' : "") + '<span class="tag">승차 ' + t.route.ride + "분 + 도보 " + p.walk + "분 (추정)</span></span></div>";
+    var s = statusOf(t.slack), tr = t.trip;
+    return '<div class="trip' + (t.mine ? " mine" : "") + '"><span class="dep">' + fmt(t.dep) + '</span><span class="info"><b>' + esc(tr.place) + "</b> 출발<br><span>도림 도착 약 " + fmt(t.dep + tr.eta) + " · 강의실 " + fmt(t.arr) + "</span></span>" +
+      '<span class="slack ' + s.cls + '">' + slackText(t.slack) + '</span><span class="tags">' + (t.mine ? '<span class="tag blue">내 승차 지점</span>' : "") + '<span class="tag">' + esc(daysLabel(tr)) + "</span>" + (tr.note ? '<span class="tag">' + esc(tr.note) + "</span>" : "") + '<span class="tag src">이동 ' + tr.eta + "분 + 도보 " + p.walk + "분 추정</span></span></div>";
   }
 
   function renderToday() {
@@ -557,13 +558,12 @@ button, input, select { font: inherit; color: inherit; }
 
     h.push('<article class="card glass" aria-label="이동 방법">');
     if (p.type === "bus") {
-      h.push('<div class="sec-head"><h3>' + (ctx.offset === 0 ? "탈 수 있는 목포권 통학버스" : "등교 통학버스") + '</h3><small>도착 시각은 추정</small></div>');
+      h.push('<div class="sec-head"><h3>' + (ctx.offset === 0 ? "탈 수 있는 " : "") + esc(state.settings.myArea) + " 등교 통학버스</h3><small>도착 시각은 추정</small></div>");
       if (p.noService) h.push('<p class="tip">주말·공휴일에는 통학버스가 운행하지 않아요.</p>');
       else if (!p.trips.length) h.push('<p class="tip">오늘 남은 등교 통학버스가 없어요. 210번 시내버스나 240-1번 농어촌버스를 이용하세요. 시각은 통학버스 탭에서 확인할 수 있어요.</p>');
       else p.trips.forEach(function (t) { h.push(busTripHtml(t, p)); });
       if (p.missedMine && !p.noService) {
-        var mr = routeById(state.settings.myRoute);
-        h.push('<p class="tip"><b>' + esc(mr ? mr.name + " " + mr.dep : "내 노선") + "은 이미 출발했어요.</b> " + (p.best ? fmt(p.best.dep) + " " + esc(p.best.route.name) + "을 타면 " + slackText(p.best.slack) + "이에요." : "제시간에 도착하는 통학버스가 없어요. 210번 시내버스 등 다른 교통편을 알아보고, 늦는다면 미리 알려 주세요.") + "</p>");
+        h.push('<p class="tip"><b>' + esc(state.settings.myBoard) + "에서 타는 버스는 제시간에 탈 수 있는 게 없어요.</b> " + (p.best ? fmt(p.best.dep) + " " + esc(p.best.trip.place) + " 출발 버스를 타면 " + slackText(p.best.slack) + "이에요." : "제시간에 도착하는 통학버스가 없어요. 210번 시내버스 등 다른 교통편을 알아보고, 늦는다면 미리 알려 주세요.") + "</p>");
       }
     } else {
       var fromName = ctx.origin === "STOP" ? "스쿨버스 승강장" : bName(ctx.origin);
@@ -577,9 +577,11 @@ button, input, select { font: inherit; color: inherit; }
 
     // 하교 안내: 오늘 수업이 끝났을 때
     if (ctx.todayDone && isWeekday(n.day)) {
-      var outs = outRoutes().filter(function (r) { return toMin(r.dep) >= n.min; });
-      h.push('<article class="card glass"><div class="sec-head"><h3>오늘 수업 끝 · 하교 통학버스</h3><small>도림캠퍼스 출발</small></div>');
-      if (outs.length) outs.forEach(function (r) { h.push('<div class="trip"><span class="dep">' + esc(r.dep) + '</span><span class="info"><b>' + esc(r.name) + "</b><br><span>" + esc(r.stops.slice(1).join(" → ")) + '</span></span><span class="slack">' + dur(toMin(r.dep) - n.min).replace(/<\/?b>/g, "") + " 뒤</span></div>"); });
+      var outs = tripsFor(state.settings.myArea, "out", n.day).filter(function (t) { return toMin(depOn(t, n.day)) >= n.min; });
+      outs.sort(function (a, b) { return (isMine(b) ? 1 : 0) - (isMine(a) ? 1 : 0) || toMin(depOn(a, n.day)) - toMin(depOn(b, n.day)); });
+      outs = outs.slice(0, 5).sort(function (a, b) { return toMin(depOn(a, n.day)) - toMin(depOn(b, n.day)); });
+      h.push('<article class="card glass"><div class="sec-head"><h3>오늘 수업 끝 · 하교 통학버스</h3><small>' + esc(state.settings.myArea) + " · 도림캠퍼스 출발</small></div>");
+      if (outs.length) outs.forEach(function (t) { var d = toMin(depOn(t, n.day)); h.push('<div class="trip' + (isMine(t) ? " mine" : "") + '"><span class="dep">' + fmt(d) + '</span><span class="info"><b>' + esc(t.place) + "행</b><br><span>" + esc(t.stops.slice(1, 4).join(" → ")) + (t.stops.length > 4 ? " …" : "") + '</span></span><span class="slack">' + dur(d - n.min).replace(/<\/?b>/g, "") + ' 뒤</span><span class="tags">' + (isMine(t) ? '<span class="tag blue">내 하차 지점</span>' : "") + '<span class="tag">' + esc(daysLabel(t)) + "</span>" + (t.note ? '<span class="tag">' + esc(t.note) + "</span>" : "") + "</span></div>"); });
       else h.push('<p class="tip">오늘 남은 하교 통학버스가 없어요. 210번 시내버스를 이용하세요.</p>');
       h.push("</article>");
     }
@@ -643,7 +645,7 @@ button, input, select { font: inherit; color: inherit; }
     var c = ctx.next, d = BUILDINGS[c.bld], steps = [], fl = floorOf(c.room);
     if (ctx.origin === "bus") {
       var t = p.mine || p.best || p.trips[0];
-      if (t) steps.push({ t: fmt(t.dep) + " " + t.route.name + " 타기", s: t.route.from + "에서 승차 · 약 " + t.route.ride + "분(추정)" });
+      if (t) steps.push({ t: fmt(t.dep) + " 통학버스 타기", s: t.trip.place + "에서 승차 · 도림캠퍼스까지 약 " + t.trip.eta + "분(추정)" });
       steps.push({ t: "도림캠퍼스 스쿨버스 승강장에서 내리기", s: "인문대학(B15) 옆 승강장" });
       steps.push({ t: d.name + (d.code ? "(" + d.code + ")" : "") + "로 걷기", s: "분수대 광장을 지나 도보 약 " + p.walk + "분(추정)" });
     } else if (ctx.origin === "STOP") {
@@ -778,59 +780,70 @@ button, input, select { font: inherit; color: inherit; }
   /* =========================================================
      9. 통학버스
      ========================================================= */
-  function routeCard(r, n) {
-    var mine = r.id === state.settings.myRoute, editing = state.editingRoute === r.id;
-    var past = isWeekday(n.day) && toMin(r.dep) < n.min;
-    var h = '<div class="route-card' + (mine ? " mine" : "") + '"><div class="top"><b>' + esc(r.name) + '</b><span class="time"' + (past ? ' style="opacity:.45"' : "") + ">" + esc(r.dep) + "</span></div>" +
-      '<div class="stops">' + esc(r.stops.join(" → ")) + "</div>" +
-      '<div class="row">' + (mine ? '<span class="tag blue">내 노선</span>' : "") + '<span class="tag">' + (r.dir === "in" ? "등교 · 승차 " + r.ride + "분(추정)" : "하교") + '</span><span class="tag src">' + esc(r.src) + "</span></div>";
+  function tripRow(t, n) {
+    var mine = isMine(t), editing = state.editingTrip === t.id;
+    var past = isWeekday(n.day) && runsOn(t, n.day) && toMin(depOn(t, n.day)) < n.min;
+    var h = '<div class="route-card' + (mine ? " mine" : "") + '"><div class="top"><b>' + esc(t.place) + (t.dir === "out" ? "행" : "") + '</b><span class="time"' + (past ? ' style="opacity:.45"' : "") + ">" + esc(t.dep) + "</span></div>" +
+      '<div class="row">' + (mine ? '<span class="tag blue">' + (t.dir === "in" ? "내 승차 지점" : "내 하차 지점") + "</span>" : "") + '<span class="tag">' + esc(daysLabel(t)) + "</span>" + (t.n > 1 ? '<span class="tag">' + t.n + "대</span>" : "") + (t.note ? '<span class="tag">' + esc(t.note) + "</span>" : "") + (t.dir === "in" ? '<span class="tag src">도림까지 약 ' + t.eta + "분(추정)</span>" : "") + (t.edited ? '<span class="tag src">직접 수정</span>' : "") + "</div>" +
+      '<details class="stops"><summary>경유 정류장 ' + t.stops.length + "곳</summary>" + esc(t.stops.join(" → ")) + "</details>";
     if (editing) {
-      h += '<div class="field-row"><div class="field"><label for="rt-dep">출발 시각</label><input type="time" id="rt-dep" value="' + esc(r.dep) + '"></div>' +
-        (r.dir === "in" ? '<div class="field"><label for="rt-ride">캠퍼스까지(분)</label><input type="number" min="5" max="120" id="rt-ride" value="' + r.ride + '"></div>' : "") +
-        '</div><div class="btn-row"><button type="button" class="btn blue sm" data-rsave="' + r.id + '">저장</button><button type="button" class="btn ghost sm" data-rcancel="1">취소</button></div>';
+      h += '<div class="field-row"><div class="field"><label for="tr-dep">출발 시각</label><input type="time" id="tr-dep" value="' + esc(t.dep) + '"></div>' +
+        (t.dir === "in" ? '<div class="field"><label for="tr-eta">도림까지(분)</label><input type="number" min="5" max="180" id="tr-eta" value="' + t.eta + '"></div>' : "") +
+        '</div><div class="btn-row"><button type="button" class="btn blue sm" data-tsave="' + t.id + '">저장</button><button type="button" class="btn ghost sm" data-tcancel="1">취소</button></div>';
     } else {
-      h += '<div class="row">' + (r.dir === "in" && !mine ? '<button type="button" class="mini" data-mine="' + r.id + '">내 노선으로</button>' : "") + '<button type="button" class="mini" data-redit="' + r.id + '">시각 고치기</button></div>';
+      h += '<div class="row">' + (!mine ? '<button type="button" class="mini" data-tmine="' + t.id + '">' + (t.dir === "in" ? "여기서 타요" : "여기서 내려요") + "</button>" : "") + '<button type="button" class="mini" data-tedit="' + t.id + '">시각 고치기</button></div>';
     }
     return h + "</div>";
   }
 
   function renderBus() {
-    var v = el("view-bus"), n = now(), h = ['<h2 class="view-title">목포권 통학버스</h2>'];
-    h.push('<div class="banner">' + esc(BUS_BASIS) + ". 실제 운행과 다르면 '시각 고치기'로 바로 수정하세요.</div>");
-    h.push('<article class="card glass"><div class="sec-head"><h3>등교 · 도림캠퍼스행</h3><small>평일 운행</small></div>');
-    inRoutes().forEach(function (r) { h.push(routeCard(r, n)); });
-    h.push('</article><article class="card glass"><div class="sec-head"><h3>하교 · 도림캠퍼스 출발</h3><small>평일 운행</small></div>');
-    outRoutes().forEach(function (r) { h.push(routeCard(r, n)); });
+    var v = el("view-bus"), n = now(), area = state.busArea || state.settings.myArea, h = ['<h2 class="view-title">통학버스</h2>'];
+    h.push('<div class="seg" role="group" aria-label="지역 선택" style="grid-template-columns:repeat(3,1fr)">' + AREAS.map(function (a) { return '<button type="button" data-area="' + a + '" aria-pressed="' + (a === area) + '">' + a + "</button>"; }).join("") + "</div>");
+    h.push('<div class="banner"><b>' + esc(BUS_BASIS) + "</b> · 국립목포대 학생지원과. " + esc(BUS_NOTICE) + "</div>");
+    if (area === state.settings.myArea) h.push('<p class="note">내 승차 지점: <b>' + esc(state.settings.myBoard) + "</b> · 내 하차 지점: <b>" + esc(state.settings.myDest) + "</b></p>");
+    else h.push('<p class="note">지금 내 지역은 ' + esc(state.settings.myArea) + "이에요. 아래에서 '여기서 타요'를 누르면 " + esc(area) + "으로 바뀌어요.</p>");
+    h.push('<article class="card glass"><div class="sec-head"><h3>등교 · 도림캠퍼스행</h3><small>' + tripsFor(area, "in").length + "개 출발</small></div>");
+    tripsFor(area, "in").forEach(function (t) { h.push(tripRow(t, n)); });
+    h.push('</article><article class="card glass"><div class="sec-head"><h3>하교 · 도림캠퍼스 출발</h3><small>' + tripsFor(area, "out").length + "개 출발</small></div>");
+    tripsFor(area, "out").forEach(function (t) { h.push(tripRow(t, n)); });
     h.push("</article>");
     h.push('<article class="card glass"><div class="sec-head"><h3>실시간 차량 위치</h3></div><p class="tip">학교가 운영하는 <b>MNU버스로</b>에서 노선별 실시간 차량 위치를 볼 수 있어요. 헤이영캠퍼스 앱에서 ‘MNU버스로’를 고르거나, 학교 홈페이지 통학버스 메뉴의 ‘MNU버스로 바로가기’를 누르세요.</p><a class="btn ghost" href="https://www.mokpo.ac.kr/www/276/subview.do" target="_blank" rel="noopener">학교 통학버스 페이지 열기</a></article>');
     h.push('<article class="card glass"><div class="sec-head"><h3>다른 교통편</h3><small>시각은 각 운영 기관 확인</small></div>');
     OTHER_TRANSIT.forEach(function (o) { h.push('<div class="rest-row" style="grid-template-columns:1fr"><span><span class="n">' + esc(o.name) + '</span><br><span class="p">' + esc(o.note) + "</span></span></div>"); });
     h.push("</article>");
     h.push('<article class="card glass"><div class="sec-head"><h3>데이터 출처</h3></div><ul class="src-list">' +
-      '<li>통학버스 노선·시각: 국립목포대 학생지원과 「2026학년도(학기중) 통학버스 노선표(안)」, 「2024학년도 통학버스 노선표」</li>' +
-      "<li>운행 규모(목포권 등교 5개 노선 17편 등)·MNU버스로 안내: 국립목포대 2026학년도 편입생 모집요강</li>" +
+      "<li>통학버스 노선·출발 시각·운행 요일: 국립목포대 학생지원과 「2026학년도 2학기 통학버스 노선표(안)」 (광주권·목포권·해남권 전체)</li>" +
+      "<li>실시간 위치 서비스(MNU버스로) 안내: 국립목포대 2026학년도 편입생 모집요강</li>" +
       "<li>건물 코드: 국립목포대 캠퍼스맵 (A09 중앙도서관, A14 학생회관, A60 플라자60, B15 인문대학, B17 교수회관, C30·C31 자연과학대학 등)</li>" +
       "<li>캠퍼스 주소: 전남 무안군 청계면 영산로 1666</li>" +
-      "<li>추정값: 승차 소요 시간, 건물 간 도보 시간, 개략도 배치, 캠퍼스 중심 좌표</li></ul>" +
-      '<button type="button" class="btn danger sm" id="resetRoutes">통학버스 데이터 초기화</button></article>');
+      "<li>추정값: 버스 출발부터 도림캠퍼스 도착까지 시간, 건물 간 도보 시간, 개략도 배치, 캠퍼스 중심 좌표</li></ul>" +
+      '<button type="button" class="btn danger sm" id="resetTrips">통학버스 데이터 초기화</button></article>');
     v.innerHTML = h.join("");
 
-    v.querySelectorAll("[data-mine]").forEach(function (b) { b.addEventListener("click", function () { state.settings.myRoute = b.getAttribute("data-mine"); saveSettings(); toast("내 노선을 바꿨어요."); render(); }); });
-    v.querySelectorAll("[data-redit]").forEach(function (b) { b.addEventListener("click", function () { state.editingRoute = b.getAttribute("data-redit"); renderBus(); el("rt-dep").focus(); }); });
-    v.querySelectorAll("[data-rcancel]").forEach(function (b) { b.addEventListener("click", function () { state.editingRoute = null; renderBus(); }); });
-    v.querySelectorAll("[data-rsave]").forEach(function (b) {
+    v.querySelectorAll("[data-area]").forEach(function (b) { b.addEventListener("click", function () { state.busArea = b.getAttribute("data-area"); state.editingTrip = null; renderBus(); }); });
+    v.querySelectorAll("[data-tmine]").forEach(function (b) {
       b.addEventListener("click", function () {
-        var r = routeById(b.getAttribute("data-rsave")), dep = el("rt-dep").value, rideEl = el("rt-ride");
-        if (!dep) return;
-        var before = JSON.parse(JSON.stringify(state.routes));
-        r.dep = dep; if (rideEl) { var rv = parseInt(rideEl.value, 10); if (rv >= 5 && rv <= 120) r.ride = rv; }
-        r.src = "직접 수정"; state.editingRoute = null; save("mnu_routes", state.routes); render();
-        toast(r.name + " 시각을 저장했어요.", function () { state.routes = before; save("mnu_routes", state.routes); render(); });
+        var t = tripById(b.getAttribute("data-tmine"));
+        state.settings.myArea = t.area;
+        if (t.dir === "in") state.settings.myBoard = t.place; else state.settings.myDest = t.place;
+        saveSettings(); toast(t.dir === "in" ? "승차 지점을 ‘" + t.place + "’로 정했어요." : "하차 지점을 ‘" + t.place + "’로 정했어요."); render();
       });
     });
-    el("resetRoutes").addEventListener("click", function () {
-      var before = state.routes; state.routes = ROUTES_DEFAULT.map(function (r) { return Object.assign({}, r); }); save("mnu_routes", state.routes); render();
-      toast("통학버스 데이터를 처음 값으로 되돌렸어요.", function () { state.routes = before; save("mnu_routes", state.routes); render(); });
+    v.querySelectorAll("[data-tedit]").forEach(function (b) { b.addEventListener("click", function () { state.editingTrip = b.getAttribute("data-tedit"); renderBus(); el("tr-dep").focus(); }); });
+    v.querySelectorAll("[data-tcancel]").forEach(function (b) { b.addEventListener("click", function () { state.editingTrip = null; renderBus(); }); });
+    v.querySelectorAll("[data-tsave]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var t = tripById(b.getAttribute("data-tsave")), dep = el("tr-dep").value, etaEl = el("tr-eta");
+        if (!dep) return;
+        var before = JSON.parse(JSON.stringify(state.trips));
+        t.dep = dep; t.fri = null; if (etaEl) { var ev = parseInt(etaEl.value, 10); if (ev >= 5 && ev <= 180) t.eta = ev; }
+        t.edited = true; state.editingTrip = null; saveTrips(); render();
+        toast(t.place + " " + dep + " 버스를 저장했어요.", function () { state.trips = before; saveTrips(); render(); });
+      });
+    });
+    el("resetTrips").addEventListener("click", function () {
+      var before = state.trips; state.trips = JSON.parse(JSON.stringify(TRIPS_DEFAULT)); saveTrips(); render();
+      toast("통학버스 데이터를 노선표 값으로 되돌렸어요.", function () { state.trips = before; saveTrips(); render(); });
     });
   }
 
