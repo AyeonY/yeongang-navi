@@ -1,0 +1,15 @@
+{
+  "name": "연강 내비",
+  "short_name": "연강 내비",
+  "description": "국립목포대 도림캠퍼스 통학버스와 다음 강의실까지 이동 시간을 한 화면에서 확인하는 웹앱",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#e8eaf2",
+  "theme_color": "#2c50e0",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
